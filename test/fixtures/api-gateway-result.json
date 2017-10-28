@@ -1,0 +1,226 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "Stack to test API Gateway",
+  "Metadata":{
+    "aws": {
+      "region": "eu-west-1",
+      "capabilities": "CAPABILITY_IAM",
+      "isTemplate": true,
+      "__external": {"swaggerdef": "swagger.json"},
+      "template": {
+        "stages": [
+          {"name": "devtotomz"},
+          {"name": "gamma"},
+          {"name": "prod"}
+        ]
+      }
+  }},
+  "Parameters": {
+    "domainName": {
+      "Type": "String",
+      "Default": "daje.tech"
+    }
+  },
+  "Resources": {
+
+    "EchoLambdaPermission": {
+      "Type": "AWS::Lambda::Permission",
+      "Properties": {
+        "Action": "lambda:invokeFunction",
+        "FunctionName": "LOL",
+        "Principal": "apigateway.amazonaws.com",
+        "SourceArn": {"Fn::Join": ["",["arn:aws:execute-api:", {"Ref": "AWS::Region"}, ":", {"Ref": "AWS::AccountId"}, ":", {"Ref": "Elyapi"}, "/*"]]}
+      }
+    },
+
+    "Elyapi": {
+      "Type": "AWS::ApiGateway::RestApi",
+      "Properties": {
+        "Description": "Elysium HTTP API ",
+        "FailOnWarnings": true,
+        "Name": "ElyAPI",
+        "Body": {
+  "swagger": "2.0",
+  "info": {
+    "version": "1.0.0",
+    "title": "Test"
+  },
+  "schemes": [
+    "https"
+  ],
+  "x-amazon-apigateway-request-validators": {
+    "Validate body": {
+      "validateRequestParameters": false,
+      "validateRequestBody": true
+    }
+  }
+}
+      }
+    },
+
+    "LambdaSignupPermission": {
+      "Type": "AWS::Lambda::Permission",
+      "Properties": {
+        "Action": "lambda:invokeFunction",
+        "FunctionName": {"Fn::ImportValue" : "lambda-signup:SignupFunction"},
+        "Principal": "apigateway.amazonaws.com",
+        "SourceArn": {"Fn::Join": ["", ["arn:aws:execute-api:", {"Ref": "AWS::Region"}, ":", {"Ref": "AWS::AccountId"}, ":", {"Ref": "Elyapi"}, "/*"]]}
+      }
+    },
+
+    "LambdaSignupPermissiondevtotomz": {
+      "Type": "AWS::Lambda::Permission",
+      "Properties": {
+        "Action": "lambda:invokeFunction",
+        "FunctionName": {"Fn::ImportValue" : "lambda-signup:SignupFunctionAliasdevtotomz"},
+        "Principal": "apigateway.amazonaws.com",
+        "SourceArn": {"Fn::Join": ["", ["arn:aws:execute-api:", {"Ref": "AWS::Region"}, ":", {"Ref": "AWS::AccountId"}, ":", {"Ref": "Elyapi"}, "/*"]]}
+      }
+    },
+    "LambdaSignupPermissiongamma": {
+      "Type": "AWS::Lambda::Permission",
+      "Properties": {
+        "Action": "lambda:invokeFunction",
+        "FunctionName": {"Fn::ImportValue" : "lambda-signup:SignupFunctionAliasgamma"},
+        "Principal": "apigateway.amazonaws.com",
+        "SourceArn": {"Fn::Join": ["", ["arn:aws:execute-api:", {"Ref": "AWS::Region"}, ":", {"Ref": "AWS::AccountId"}, ":", {"Ref": "Elyapi"}, "/*"]]}
+      }
+    },
+    "LambdaSignupPermissionprod": {
+      "Type": "AWS::Lambda::Permission",
+      "Properties": {
+        "Action": "lambda:invokeFunction",
+        "FunctionName": {"Fn::ImportValue" : "lambda-signup:SignupFunctionAliasprod"},
+        "Principal": "apigateway.amazonaws.com",
+        "SourceArn": {"Fn::Join": ["", ["arn:aws:execute-api:", {"Ref": "AWS::Region"}, ":", {"Ref": "AWS::AccountId"}, ":", {"Ref": "Elyapi"}, "/*"]]}
+      }
+    },
+
+    "Deploymentdevtotomz": {
+      "Type": "AWS::ApiGateway::Deployment",
+      "Properties": {
+        "RestApiId": { "Ref": "Elyapi" },
+        "Description": "Deployment in devtotomz",
+        "StageName": "devtotomz",
+        "StageDescription": {
+          "Variables" : { "elyenv":"devtotomz" }
+        }
+      }
+    },
+    "Deploymentgamma": {
+      "Type": "AWS::ApiGateway::Deployment",
+      "Properties": {
+        "RestApiId": { "Ref": "Elyapi" },
+        "Description": "Deployment in gamma",
+        "StageName": "gamma",
+        "StageDescription": {
+          "Variables" : { "elyenv":"gamma" }
+        }
+      }
+    },
+    "Deploymentprod": {
+      "Type": "AWS::ApiGateway::Deployment",
+      "Properties": {
+        "RestApiId": { "Ref": "Elyapi" },
+        "Description": "Deployment in prod",
+        "StageName": "prod",
+        "StageDescription": {
+          "Variables" : { "elyenv":"prod" }
+        }
+      }
+    },
+
+    "PathMappingdevtotomz": {
+      "Type": "AWS::ApiGateway::BasePathMapping",
+      "DependsOn": ["Deploymentdevtotomz","EyApiDomainNamedevtotomz"],
+      "Properties": {
+        "BasePath": "",
+        "DomainName": "devtotomz.daje.tech",
+        "RestApiId": { "Ref": "Elyapi" },
+        "Stage": "devtotomz"
+      }
+    },
+    "EyApiDomainNamedevtotomz":{
+      "Type": "AWS::ApiGateway::DomainName",
+      "Properties": {
+        "CertificateArn": "LOL",
+        "DomainName": "devtotomz.daje.tech"
+      }
+    },
+
+    "PathMappinggamma": {
+      "Type": "AWS::ApiGateway::BasePathMapping",
+      "DependsOn": ["Deploymentgamma","EyApiDomainNamegamma"],
+      "Properties": {
+        "BasePath": "",
+        "DomainName": "gamma.daje.tech",
+        "RestApiId": { "Ref": "Elyapi" },
+        "Stage": "gamma"
+      }
+    },
+    "EyApiDomainNamegamma":{
+      "Type": "AWS::ApiGateway::DomainName",
+      "Properties": {
+        "CertificateArn": "LOL",
+        "DomainName": "gamma.daje.tech"
+      }
+    },
+
+    "PathMappingprod": {
+      "Type": "AWS::ApiGateway::BasePathMapping",
+      "DependsOn": ["Deploymentprod","EyApiDomainNameprod"],
+      "Properties": {
+        "BasePath": "",
+        "DomainName": "prod.daje.tech",
+        "RestApiId": { "Ref": "Elyapi" },
+        "Stage": "prod"
+      }
+    },
+    "EyApiDomainNameprod":{
+      "Type": "AWS::ApiGateway::DomainName",
+      "Properties": {
+        "CertificateArn": "LOL",
+        "DomainName": "prod.daje.tech"
+      }
+    },
+
+    "DNSRecordsetGroup": {
+      "Type" : "AWS::Route53::RecordSetGroup",
+      "Properties" : {
+         "HostedZoneId" : "LOL",
+         "RecordSets" : [
+           {
+             "AliasTarget": {
+               "DNSName" : { "Fn::GetAtt" : ["EyApiDomainNamedevtotomz", "DistributionDomainName"] },
+               "HostedZoneId" : "LOL"
+             },
+             "Name" : "devtotomz.daje.tech.",
+             "Type" : "A"
+           },
+           {
+             "AliasTarget": {
+               "DNSName" : { "Fn::GetAtt" : ["EyApiDomainNamegamma", "DistributionDomainName"] },
+               "HostedZoneId" : "LOL"
+             },
+             "Name" : "gamma.daje.tech.",
+             "Type" : "A"
+           },
+           {
+             "AliasTarget": {
+               "DNSName" : { "Fn::GetAtt" : ["EyApiDomainNameprod", "DistributionDomainName"] },
+               "HostedZoneId" : "LOL"
+             },
+             "Name" : "prod.daje.tech.",
+             "Type" : "A"
+           },
+           {
+             "Name" : "dummy.daje.tech.",
+             "TTL" : "120",
+             "Type" : "A",
+             "ResourceRecords" : ["151.100.152.220"]
+           }
+         ]
+      }
+   }
+  }
+}
