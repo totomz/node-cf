@@ -1,0 +1,31 @@
+{
+  "name": "cf",
+  "version": "0.0.1",
+  "description": "Add Mustache templating to AWS CLoudFormation",
+  "main": "index.js",
+  "directories": {
+    "test": "test"
+  },
+  "scripts": {
+    "test": "mocha test/**"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/totomz/node-cf.git"
+  },
+  "author": "Tommaso Doninelli",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/totomz/node-cf/issues"
+  },
+  "homepage": "https://github.com/totomz/node-cf#readme",
+  "devDependencies": {
+    "chai": "^4.1.2",
+    "mocha": "^4.0.1"
+  },
+  "dependencies": {
+    "bluebird": "^3.5.1",
+    "mustache": "^2.3.0",
+    "yamljs": "^0.3.0"
+  }
+}
