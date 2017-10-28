@@ -24,6 +24,7 @@
     "mocha": "^4.0.1"
   },
   "dependencies": {
+    "aws-sdk": "^2.141.0",
     "bluebird": "^3.5.1",
     "mustache": "^2.3.0",
     "yamljs": "^0.3.0"
