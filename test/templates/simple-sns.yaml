@@ -26,7 +26,7 @@ Resources:
       TopicName: test_topic_yaml_{{.}}
       Subscription: []
 # {{/stages}}
-  LolSns:
+  FakeSns:
     Type: AWS::SNS::Topic
     Properties:
-      TopicName: lol
+      TopicName: xxxlol_yaml
