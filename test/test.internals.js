@@ -1,5 +1,8 @@
 const expect = require('chai').expect;
 const NodeCF = require('../NodeCF');
+const Promise = require("bluebird");
+const YAML = require('yamljs');
+const readFile = Promise.promisify(require("fs").readFile);
 
 describe('Unit tests', function() {
 
@@ -34,6 +37,46 @@ describe('Unit tests', function() {
 
                 expect(tpl.metadata).to.deep.equal(expectedMetadata);
             });
+    });
+
+    it('Use the stage parameter for the name of the template', function(){
+
+        const cf = new NodeCF({
+            inputFile: 'test/templates/simple-sns-nostages.yaml',
+            action: 'createStack',
+            dryRun: true,
+            profile: 'invalid',
+            stages: [{name: 'gamma'}, {name: 'daje'}]
+        });
+
+        return cf
+            .buildTemplate()
+            .then(template => {
+                const expectedMetadata = {
+                    aws: {
+                        "region": "eu-west-1",
+                        "capabilities": "CAPABILITY_IAM",
+                        "isTemplate": true,
+                        "template": {
+                            "name": "gamma-test-nodecf-yaml",
+                            "stages": [
+                                { "name": "gamma" },
+                                { "name": "daje" }
+                            ]
+                        }
+                    }
+                };
+
+                expect(template.metadata).to.deep.equal(expectedMetadata);
+
+                return readFile('test/fixtures/simple-sns-nostages-result.yaml')
+                    .then(expectedContents => {
+                        expect(YAML.parse(template.contents).Resources).to.be.deep.equal(YAML.parse(expectedContents.toString()).Resources);
+                        return true;
+                    });
+            });
+
+
     });
 
     it('LoadExternals', function() {
