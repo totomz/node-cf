@@ -1,6 +1,10 @@
 language: node_js
 node_js:
 - node
+notifications:
+  email:
+    on_success: always
+    on_failure: always
 cache:
   directories:
   - node_modules

@@ -43,6 +43,17 @@ NodeCF.prototype.buildTemplate = function () {
 
     return readFile(this.options.inputFile)
         .then(data => {return this.loadExternals(this.options.inputFile, data)})
+        .then(data => {
+
+            // "stages" are particular elements that we want to add to the template metadata.
+            // The template may specify additional stages
+            data.metadata.aws.template.stages = [].concat(data.metadata.aws.template.stages || [], this.options.stages || []);
+
+            // Stages can be used in the template metadata itself, so pass the to mustache
+            data.metadata = JSON.parse(Mustache.render(JSON.stringify(data.metadata),data.metadata.aws.template));   // Al limite dell'incesto....
+
+            return data;
+        })
         .then(this.render)
 };
 

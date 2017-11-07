@@ -5,13 +5,14 @@
 
 # Usage
 1. Install: `npm install -g cftpl`
-2. Execution: `cftpl <create|update> <template_path> <profile> [dryrun]`
+2. Execution: `cftpl -h` prints all the options, which are
 
-Parameters:
-* `create` to create a new stack, `update` to update an existing stack using the same name
-* `template_path` yep the path to your AWS CloudFormation template (json or YAML)
-* `profile` is the [AWS profile](http://docs.aws.amazon.com/cli/latest/userguide/cli-multiple-profiles.html) to use to call CloudFormation (this is the **only** supported credential settings) 
-* `dryrun` if you specify this parameter, CloudFormation will not be called
+* `--create <path>`: Create a CF stack using the template file at the specified path
+* `--update <path>`: Update an existing CF stack using the template file at the specified path (the nme of the stack is speified in the template itself)
+* `--profile ,profile>`: the [AWS profile](http://docs.aws.amazon.com/cli/latest/userguide/cli-multiple-profiles.html) to use to call CloudFormation (this is the **only** supported credential settings)
+* `--dryrun`: if you specify this parameter, CloudFormation will not be called
+* `--stage <stage>`: Add a variable `stages: [{name: <stage>}]` to the template metadata - this is usefull to create separate stack with the same template (see the examples in `/test`)
+
 
 # How to write a template
 The templating engine is [Mustache](https://mustache.github.io/), refer to Mustache' suser manual. 

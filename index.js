@@ -1,29 +1,28 @@
 #! /usr/bin/env node
 
 const NodeCF = require('./NodeCF');
+const program = require('commander');
 
 
-const usage = 'USAGE cf <create|update> <path_to_the_stack> <profile> [dryrun]';
-
-if (process.argv.length < 4) {
-    return console.log(usage);
-}
-
-process.argv.forEach((val, index) => {
-    console.log(`${index}: ${val}`);
-});
-
-const action = `${process.argv[2]}Stack`;
-const inputFile = process.argv[3];
-const aws_profile  = process.argv[4];
-const dryRun  = !!(process.argv[5]);
+program
+    .version('0.1.3')
+    .option('-c, --create [path]', 'Create a new stack using the template specified by path')
+    .option('-u, --update [path]', 'Update an existing stack using the template specified by path')
+    .option('-d, --dry-run', 'Do not execute AWS CloudFormation')
+    .option('-p, --profile [pofile]', 'Name of the AWS profile to use to call AWS CloudFormation')
+    .option('-s, --stage [name]', 'Add a stage with this name to the list of stages in the template (that can be empty)')
+    .parse(process.argv);
 
 const runParams = {
-    inputFile,
-    action,
-    aws_profile,
-    dryRun
+    inputFile: program.create || program.update,
+    action: (program.create)?'createStack':'updateStack',
+    aws_profile: program.profile,
+    dryRun: program.dryRun
 };
+
+if(program.stage){
+    runParams.stages = [{name: program.stage}];
+}
 
 console.log(JSON.stringify(runParams));
 
