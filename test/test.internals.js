@@ -55,7 +55,7 @@ describe('Unit tests', function() {
                 const expectedMetadata = {
                     aws: {
                         "region": "eu-west-1",
-                        "capabilities": "CAPABILITY_IAM",
+                        "capabilities": ["CAPABILITY_IAM", "CAPABILITY_NAMED_IAM"],
                         "isTemplate": true,
                         "template": {
                             "name": "gamma-test-nodecf-yaml",

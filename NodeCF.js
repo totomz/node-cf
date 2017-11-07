@@ -52,6 +52,10 @@ NodeCF.prototype.buildTemplate = function () {
             // Stages can be used in the template metadata itself, so pass the to mustache
             data.metadata = JSON.parse(Mustache.render(JSON.stringify(data.metadata),data.metadata.aws.template));   // Al limite dell'incesto....
 
+            if(data.metadata.aws.capabilities && typeof data.metadata.aws.capabilities === 'string') {
+                data.metadata.aws.capabilities = data.metadata.aws.capabilities.split(" ");
+            }
+
             return data;
         })
         .then(this.render)
@@ -84,16 +88,11 @@ NodeCF.prototype.saveToCloudFormation = function(data) {
 
 
     const StackName =  templateMeta.aws.template.name; // || path.dirname(templateFile).split(path.sep).pop().match(/(?=[a-z]).*/)[0];
-    let Capabilities = [];
     const TemplateBody = contents;
-
-    if(templateMeta.aws.capabilities && typeof templateMeta.aws.capabilities === 'string'){
-        Capabilities = [templateMeta.aws.capabilities]
-    }
 
     return new AWS.CloudFormation({ region: templateMeta.aws.region })[this.options.action]({
         StackName,
-        Capabilities,
+        Capabilities: templateMeta.aws.capabilities,
         TemplateBody
     }).promise();
 };

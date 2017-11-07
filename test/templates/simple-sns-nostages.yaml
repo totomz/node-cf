@@ -8,7 +8,9 @@ Metadata:
     region: eu-west-1
     # If your template requires CAPABILITIES
     # add them here (http://docs.aws.amazon.com/AWSCloudFormation/latest/APIReference/API_CreateStack.html)
-    capabilities: CAPABILITY_IAM
+    capabilities:
+      - CAPABILITY_IAM
+      - CAPABILITY_NAMED_IAM
     # Not used yet
     isTemplate: true
     template:
