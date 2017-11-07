@@ -61,13 +61,18 @@ NodeCF.prototype.buildTemplate = function () {
 NodeCF.prototype.saveToCloudFormation = function(data) {
 
     const {metadata, contents} = data;
+    const templateMeta = metadata;
+
+    if(!templateMeta.aws.template.name) {
+        return Promise.reject(new Error("[BadTemplate] Required field 'Metadata.aws.template.name' not found"))
+    }
 
     if(this.options.aws_profile) {
         AWS.config.credentials = new AWS.SharedIniFileCredentials({profile: this.options.aws_profile});
     }
 
-    const templateMeta = metadata;
-    const StackName =  templateMeta.aws.template.name || path.dirname(templateFile).split(path.sep).pop().match(/(?=[a-z]).*/)[0];
+
+    const StackName =  templateMeta.aws.template.name; // || path.dirname(templateFile).split(path.sep).pop().match(/(?=[a-z]).*/)[0];
     let Capabilities = [];
     const TemplateBody = contents;
 

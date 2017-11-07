@@ -18,6 +18,29 @@ describe('Full Test', function() {
             .then(template => { expect(JSON.parse(template.contents)).to.be.deep.equal(require('./fixtures/api-gateway-result.json')); })
     });
 
+    it('Fail if the StackName is not specified in the template', function(done) {
+
+        // This test is weird and not really usefull...there could be false-positive
+        // To improve
+        const runParams = {
+            inputFile: 'test/templates/invalid-noname.yaml',
+            action: 'createStack',
+            dryRun: true,
+            profile: 'invalid'
+        };
+
+        const cf = new NodeCF(runParams);
+        cf
+            .buildTemplate()
+            .then(template => { return cf.saveTempalteToTempFile(template); })
+            .then(data => { return cf.saveToCloudFormation(data); })
+            .then(data => { done(new Error("A template without a name is invalid - failure expected")); })  // Faulty condition
+            .catch(error => {
+                expect(error.message).to.be.equal("[BadTemplate] Required field 'Metadata.aws.template.name' not found");
+                done();
+            });
+    });
+
     it('Parse a YAMML input', function() {
 
         return new NodeCF({
