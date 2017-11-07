@@ -5,7 +5,7 @@ const program = require('commander');
 
 
 program
-    .version('0.1.3')
+    .version('0.1.5')
     .option('-c, --create [path]', 'Create a new stack using the template specified by path')
     .option('-u, --update [path]', 'Update an existing stack using the template specified by path')
     .option('-d, --dry-run', 'Do not execute AWS CloudFormation')
