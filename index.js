@@ -30,5 +30,6 @@ const cf = new NodeCF(runParams);
 return cf
     .buildTemplate()
     .then(template => { return cf.saveTempalteToTempFile(template); })
+    .then(data => { return cf.validateTemplate(data); })
     .then(data => { return cf.saveToCloudFormation(data); })
     .then(data => { console.log(data); });

@@ -58,9 +58,23 @@ describe('Full Test', function() {
         });
     });
 
-    it('Create a CloudFormation stack (manual only)', function(){
+    it('Stop invalid CloudFormation template', function() {
 
-        return Promise.resolve('yay!');
+        const cf = new NodeCF({
+            inputFile: 'test/templates/simple-sns-invalid.yaml',
+            action: 'createStack',
+            aws_profile: 'elysium',
+            dryRun: true
+        });
+
+        return cf.buildTemplate()
+        .then(template => { return cf.saveTempalteToTempFile(template); })
+        .then(data => { return cf.validateTemplate(data); })
+        .catch(err => { expect(err.name).to.be.equal('ValidationError'); return "ok200";})
+        .then(data => { expect(data).to.be.equal("ok200") });
+    });
+
+    it('Create a CloudFormation stack ', function(){
 
         cf = new NodeCF({
             inputFile: 'test/templates/simple-sns.json',
@@ -72,13 +86,12 @@ describe('Full Test', function() {
         return cf
             .buildTemplate()
             .then(template => { return cf.saveTempalteToTempFile(template); })
+            .then(data => { return cf.validateTemplate(data); })
             .then(data => { return cf.saveToCloudFormation(data); })
-            .then(data => { return new AWS.CloudFormation({ region: 'eu-west-1'}).describeStacks({StackName: 'xxx-test-nodecf'}).promise(); })
+            .then(data => { expect(data.contents).to.be.a('string'); })
     });
 
-    it('Create a CloudFormation stack (manual only) - YAML', function(){
-
-        return Promise.resolve('yay!');
+    it('Create a CloudFormation stack - YAML', function(){
 
         cf = new NodeCF({
             inputFile: 'test/templates/simple-sns.yaml',
@@ -87,19 +100,12 @@ describe('Full Test', function() {
             dryRun: true
         });
 
-        const cloudFormation = new AWS.CloudFormation({ region: 'eu-west-1'});
-
         return cf
             .buildTemplate()
             .then(template => { return cf.saveTempalteToTempFile(template); })
+            .then(data => { return cf.validateTemplate(data); })
             .then(data => { return cf.saveToCloudFormation(data); })
-            .then(data => {
-                return cloudFormation.describeStacks({StackName: 'xxx-test-nodecf-yaml'}).promise()
-                    // .then(res => { console.log(res); return true; })
-                    // .catch(errr => { console.log(err); })
-            })
-
+            .then(data => { expect(data.contents).to.be.a('string'); })
     });
-
 
 });

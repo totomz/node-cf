@@ -61,6 +61,17 @@ NodeCF.prototype.buildTemplate = function () {
         .then(this.render)
 };
 
+NodeCF.prototype.validateTemplate = function(data) {
+    const {metadata, contents} = data;
+    if(this.options.aws_profile) {
+        AWS.config.credentials = new AWS.SharedIniFileCredentials({profile: this.options.aws_profile});
+    }
+
+    return new AWS.CloudFormation({ region: metadata.aws.region }).validateTemplate({
+        TemplateBody: contents
+    }).promise().then(() => {return data;});
+};
+
 /**
  * Credentials are taken (in order, )
  * - this.aws_profile (http://docs.aws.amazon.com/sdk-for-javascript/v2/developer-guide/loading-node-credentials-shared.html)
@@ -73,6 +84,7 @@ NodeCF.prototype.buildTemplate = function () {
  *
  * @param template {String} The rendered template
  */
+
 NodeCF.prototype.saveToCloudFormation = function(data) {
 
     const {metadata, contents} = data;
@@ -82,10 +94,14 @@ NodeCF.prototype.saveToCloudFormation = function(data) {
         return Promise.reject(new Error("[BadTemplate] Required field 'Metadata.aws.template.name' not found"))
     }
 
+    if(this.options.dryRun) {
+        console.log("!!! DryRun !!!");
+        return Promise.resolve(data);
+    }
+
     if(this.options.aws_profile) {
         AWS.config.credentials = new AWS.SharedIniFileCredentials({profile: this.options.aws_profile});
     }
-
 
     const StackName =  templateMeta.aws.template.name; // || path.dirname(templateFile).split(path.sep).pop().match(/(?=[a-z]).*/)[0];
     const TemplateBody = contents;
