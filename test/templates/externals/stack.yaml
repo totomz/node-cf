@@ -1,0 +1,78 @@
+---
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Stack to test API Gateway
+Metadata:
+  aws:
+    region: eu-west-1
+    capabilities: CAPABILITY_IAM
+    isTemplate: true
+    __external:
+      swaggerdef: api/swagger/swagger.yaml
+    template:
+      name: "{{stages.0.name}}-api"
+
+Parameters:
+  domainName:
+    Type: String
+    Default: api.aesculapius.elysium.tech
+
+Resources:
+
+  HttpApi:
+    Type: AWS::ApiGateway::RestApi
+    Properties:
+      Description: "Appedibus API for {{stages.0.name}}"
+      FailOnWarnings: true
+      Name: Appedibus-{{stages.0.name}}
+      Body:
+        {{{swaggerdef}}}
+
+#{{#stages}}
+  Deployment{{name}}:
+    Type: AWS::ApiGateway::Deployment
+    Properties:
+      RestApiId: !Ref HttpApi
+      Description: Deployment in {{name}}
+      StageName: "{{name}}"
+      StageDescription:
+        Variables:
+          elyenv: "{{name}}"
+
+  PathMapping{{name}}:
+    Type: AWS::ApiGateway::BasePathMapping
+    DependsOn:
+      - Deployment{{name}}
+      - ApiDomainName{{name}}
+    Properties:
+      BasePath: ""
+      DomainName:
+        Fn::Join:
+          - "."
+          - - "api"
+            - !ImportValue {{name}}-dns-zone:RecordName
+      RestApiId:
+        Ref: HttpApi
+      Stage: "{{name}}"
+  ApiDomainName{{name}}:
+    Type: AWS::ApiGateway::DomainName
+    Properties:
+      CertificateArn: arn:aws:acm:us-east-1:948193187046:certificate/428adf0d-2103-4a80-8186-f3d9446a2612 # Chiaramente CertManager sta solo in IAD !ImportValue {{name}}-root-certificate:root-certificate
+      DomainName:
+        Fn::Join:
+          - "."
+          - - "api"
+            - !ImportValue {{name}}-dns-zone:RecordName
+  DNSRecordsetGroup:
+    Type: AWS::Route53::RecordSetGroup
+    Properties:
+      HostedZoneId: !ImportValue {{name}}-dns-zone:ZoneId
+      RecordSets:
+      - AliasTarget:
+          DNSName:
+            Fn::GetAtt:
+            - ApiDomainName{{name}}
+            - DistributionDomainName
+          HostedZoneId: !ImportValue {{name}}-dns-zone:ZoneId
+        Name: "{{name}}.api.aesculapius.elysium.tech."
+        Type: A
+#{{/stages}}

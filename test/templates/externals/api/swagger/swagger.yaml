@@ -1,0 +1,380 @@
+swagger: '2.0'
+info:
+  version: 1.0.0
+  title: Test
+schemes:
+  - https
+tags:
+  - name: test
+    description: Endpoints to test API GATEWAY and Lambda
+  - name: user
+    description: Endpoints that manage users
+consumes:
+  - application/json
+produces:
+  - application/json
+paths:
+  /list_booking/{userID}:
+    get:
+      summary: list of bookings for a given user ID.
+      description: list of bookings for a given user ID
+      tags:
+        - list
+      parameters:
+        - name: userID
+          in: path
+          type: string
+          required: true      
+      responses:
+        '200':
+          description: 200 response
+          schema:
+            $ref: '#/definitions/Booking'
+        '500':
+          description: 500 response
+          schema:
+            $ref: '#/definitions/ErrorMessage'
+      x-amazon-apigateway-integration:
+        responses:
+          default:
+            statusCode: '200'
+            responseTemplates:
+              application/json: |-
+                #set($inputRoot = $input.path('$'))
+                {
+                  "daje":"default response, everything is ok - and DOES NOT match the swagger output!"}
+          '5\d{2}':
+            statusCode: '500'
+            responseTemplates:
+              application/json: |-
+                #set($inputRoot = $input.path('$'))
+                {
+                  "uid" : "$input.params('code')",
+                  "message" : "$input.params('name')"
+                }
+        requestTemplates:
+          application/json: '{"statusCode": $input.params(''code''), "daje":"default value"}'
+        passthroughBehavior: when_no_match
+        type: mock
+  /schools:
+    get:
+      summary: list of schools.
+      description: list of schools
+      tags:
+        - list
+      responses:
+        '200':
+          description: 200 response
+          schema:
+            $ref: '#/definitions/Schools'
+        '500':
+          description: 500 response
+          schema:
+            $ref: '#/definitions/ErrorMessage'
+      x-amazon-apigateway-integration:
+        responses:
+          default:
+            statusCode: '200'
+            responseTemplates:
+              application/json: |-
+                #set($inputRoot = $input.path('$'))
+                {
+                  "daje":"default response, everything is ok - and DOES NOT match the swagger output!"}
+          '5\d{2}':
+            statusCode: '500'
+            responseTemplates:
+              application/json: |-
+                #set($inputRoot = $input.path('$'))
+                {
+                  "uid" : "$input.params('code')",
+                  "message" : "$input.params('name')"
+                }
+        requestTemplates:
+          application/json: '{"statusCode": $input.params(''code''), "daje":"default value"}'
+        passthroughBehavior: when_no_match
+        type: mock
+    post:
+      summary: add a new school
+      description: add a new school
+      parameters:
+        - name: school
+          in: body
+          description: new school
+          schema:
+            $ref: "#/definitions/School"
+      responses:
+        '201':
+          description: School created
+  '/path/{schoolID}':
+    get:
+      summary: get the paths path of a given school.
+      description: get the paths path of a given school
+      tags:
+        - percorso
+      parameters:
+        - name: schoolID
+          in: path
+          type: string
+          required: true
+      responses:
+        '200':
+          description: 200 response
+          schema:
+            $ref: '#/definitions/Paths'
+        '500':
+          description: 500 response
+          schema:
+            $ref: '#/definitions/ErrorMessage'
+      x-amazon-apigateway-integration:
+        responses:
+          default:
+            statusCode: '200'
+            responseTemplates:
+              application/json: |-
+                #set($inputRoot = $input.path('$'))
+                {
+                  "daje":"default response, everything is ok - and DOES NOT match the swagger output!"}
+          '5\d{2}':
+            statusCode: '500'
+            responseTemplates:
+              application/json: |-
+                #set($inputRoot = $input.path('$'))
+                {
+                  "uid" : "$input.params('code')",
+                  "message" : "$input.params('name')"
+                }
+        requestTemplates:
+          application/json: '{"statusCode": $input.params(''code''), "daje":"default value"}'
+        passthroughBehavior: when_no_match
+        type: mock    
+  '/school/{schoolID}/{pathID}':
+    get:
+      summary: get the walking path by id.
+      description: get the walking path by id
+      tags:
+        - percorso
+      parameters:
+        - name: schoolID
+          in: path
+          type: string
+          required: true
+        - name: pathID
+          in: path
+          type: string
+          required: true
+      responses:
+        '200':
+          description: 200 response
+          schema:
+            $ref: '#/definitions/Line'
+        '500':
+          description: 500 response
+          schema:
+            $ref: '#/definitions/ErrorMessage'
+      x-amazon-apigateway-integration:
+        responses:
+          default:
+            statusCode: '200'
+            responseTemplates:
+              application/json: |-
+                #set($inputRoot = $input.path('$'))
+                {
+                  "daje":"default response, everything is ok - and DOES NOT match the swagger output!"}
+          '5\d{2}':
+            statusCode: '500'
+            responseTemplates:
+              application/json: |-
+                #set($inputRoot = $input.path('$'))
+                {
+                  "uid" : "$input.params('code')",
+                  "message" : "$input.params('name')"
+                }
+        requestTemplates:
+          application/json: '{"statusCode": $input.params(''code''), "daje":"default value"}'
+        passthroughBehavior: when_no_match
+        type: mock
+  /test-mockdocument:
+    get:
+      summary: TEST mocked endpoint.
+      description: >-
+        API Gateway requires for mocked integratin that the request get mapped
+        to a JSON object with a statusCode property. The value of statuscode is
+        then used to map the response to return to the caller.
+      tags:
+        - test
+      parameters:
+        - name: name
+          in: query
+          type: string
+        - name: code
+          in: query
+          type: string
+      responses:
+        '200':
+          description: 200 response
+          schema:
+            $ref: '#/definitions/ErrorMessage'
+        '500':
+          description: 500 response
+          schema:
+            $ref: '#/definitions/ErrorMessage'
+      x-amazon-apigateway-integration:
+        responses:
+          default:
+            statusCode: '200'
+            responseTemplates:
+              application/json: |-
+                #set($inputRoot = $input.path('$'))
+                {
+                  "daje":"default response, everything is ok - and DOES NOT match the swagger output!"}
+          '5\d{2}':
+            statusCode: '500'
+            responseTemplates:
+              application/json: |-
+                #set($inputRoot = $input.path('$'))
+                {
+                  "uid" : "$input.params('code')",
+                  "message" : "$input.params('name')"
+                }
+        requestTemplates:
+          application/json: '{"statusCode": $input.params(''code''), "daje":"default value"}'
+        passthroughBehavior: when_no_match
+        type: mock
+definitions:
+  Status:
+    type: object
+    properties:
+      status: 
+        type: string
+      message:
+        type: string
+  Schools:
+    type: array
+    items:
+      $ref: '#/definitions/School'
+  School:
+    description: school paths
+    type: object
+    properties:
+      id:
+        type: string
+      name:
+        type: string
+  Paths:
+    type: array
+    items:
+      $ref: '#/definitions/Line'
+  Run:
+    description: A run of a line of pedibus scheduled to be executed at a given time
+    type: object
+    properties:
+      status:
+        $ref: "#/definitions/Status"
+  Line:
+    description: line and relative markers
+    type: object
+    properties:
+      id:
+        type: string
+      schoolID:
+        type: string
+      name:
+        type: string
+      color:
+        type: string
+      max_kids:
+        type: number
+      num_conductors:
+        type: number
+      shape:
+        type: string
+      items:
+        $ref: '#/definitions/Stop'
+  Booking:
+    description: book for path
+    type: object
+    properties:
+      date:
+        type: number
+        description: >-
+          Date in milliseconds since 1 January 1970 00:00:00 (new
+          Date().getTime())      
+      markerID:
+        type: string
+      pathID:
+        type: string
+      status:
+        $ref: "#/definitions/Status"
+  Stop:
+    description: Marker with geo coords
+    type: object
+    properties:
+      lat:
+        type: string
+      lng:
+        type: string
+  Partecipant:
+    description: you can retrieve partecipant info with his her id 
+    type: object
+    properties:
+      id:
+        type: string
+      parent_id:
+        type: string
+      child_id:
+        type: string
+      line_id:
+        type: string
+      stop_from:
+        type: string
+      date:
+        type: number
+        description: >-
+          Date in milliseconds since 1 January 1970 00:00:00 (new
+          Date().getTime())
+  Parent:
+    description: Can book a ride on a specific pedibus line on a given schedule
+    type: object
+    properties:
+      parent_id:
+        type: string
+  User:
+    description: An user that interacts with the pedibua app (can be a parent, school empoloyee or a path guide)
+    type: object
+    properties:
+      fullName:
+        type: string
+        description: Full name of the user
+      telMobile:
+        type: string
+        description: User mobile phone. It requires the ITU prefix in +XX form
+        pattern: \+\d*$
+      email:
+        type: string
+        description: User email
+        format: email
+    required:
+      - fullName
+      - email
+  ErrorMessage:
+    type: object
+    properties:
+      uid:
+        type: string
+        description: Request uid
+      message:
+        type: string
+        description: Error message
+    required:
+      - message
+      - uid
+  NewUserMessage:
+    type: object
+    properties:
+      user_id:
+        type: string
+        description: The user unique identifier
+x-amazon-apigateway-request-validators:
+  Validate body:
+    validateRequestParameters: false
+    validateRequestBody: true

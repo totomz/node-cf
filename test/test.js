@@ -4,6 +4,7 @@ const AWS = require('aws-sdk');
 const YAML = require('yamljs');
 const Promise = require("bluebird");
 const readFile = Promise.promisify(require("fs").readFile);
+require('dotenv').config();
 
 describe('Full Test', function() {
 
@@ -63,7 +64,6 @@ describe('Full Test', function() {
         const cf = new NodeCF({
             inputFile: 'test/templates/simple-sns-invalid.yaml',
             action: 'createStack',
-            aws_profile: 'elysium',
             dryRun: true
         });
 
@@ -79,7 +79,6 @@ describe('Full Test', function() {
         cf = new NodeCF({
             inputFile: 'test/templates/simple-sns.json',
             action: 'createStack',
-            aws_profile: 'elysium',
             dryRun: true
         });
 
@@ -96,7 +95,6 @@ describe('Full Test', function() {
         cf = new NodeCF({
             inputFile: 'test/templates/simple-sns.yaml',
             action: 'createStack',
-            aws_profile: 'elysium',
             dryRun: true
         });
 
@@ -106,6 +104,25 @@ describe('Full Test', function() {
             .then(data => { return cf.validateTemplate(data); })
             .then(data => { return cf.saveToCloudFormation(data); })
             .then(data => { expect(data.contents).to.be.a('string'); })
+    });
+
+    it('Handle externals - YAML', function(){
+
+        cf = new NodeCF({
+            inputFile: 'test/templates/externals/stack.yaml',
+            action: 'createStack',
+            dryRun: true
+        });
+
+        return cf
+            .buildTemplate()
+            .then(template => { return cf.saveTempalteToTempFile(template); })
+            .then(data => { return cf.validateTemplate(data); })
+            .then(data => { expect(data.contents).to.be.a('string'); return data; })
+            .then(data => {
+                const tpl = YAML.parse(data.contents);
+                expect(tpl.Resources.HttpApi.Properties.Body.paths['/list_booking/{userID}'].get.summary).to.be.equal('list of bookings for a given user ID.');
+            })
     });
 
 });

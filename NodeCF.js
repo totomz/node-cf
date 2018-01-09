@@ -191,7 +191,19 @@ NodeCF.prototype.readFileYaml = function(templateFile) {
     return readFile(templateFile, 'utf-8')
         .then(contents => {
             return new Promise((resolve, reject) => {
-                const template = YAML.parse(contents);
+
+                // As with JSON, here we care only about the metadata. Don't need to parse the contents,
+                // that can be invlaid due to mustache stuff
+                const buffer = [];
+                const lines = contents.split('\n');
+                for(let i=0; i<lines.length; i++) {
+                    if(/Resources:/.test(lines[i])){
+                        break;
+                    }
+                    buffer.push(lines[i]);
+                }
+
+                const template = YAML.parse(buffer.join('\n'));
                 resolve({
                     metadata: template.Metadata,
                     contents: contents
@@ -206,6 +218,7 @@ NodeCF.prototype.readFileYaml = function(templateFile) {
  * @param data {Metacontent}
  * @return {Promise.<Metacontent>} Where the metadata keys have been loaded withexternal contents
  */
+let __globalcahce = undefined;
 NodeCF.prototype.loadExternals = function(templateFile, data){
     const {metadata, contents} = data;
 
@@ -224,7 +237,34 @@ NodeCF.prototype.loadExternals = function(templateFile, data){
         const externalFile = `${basePath}/${metadata.aws.__external[key]}`;
         console.log(`Loading external from ${externalFile}`);
         extern.push(
-            readFile(externalFile, 'utf-8').then(externalcontents => { return {key, externalcontents} })
+            readFile(externalFile, 'utf-8').then(externalcontents => {
+
+                // Try to indent substack for YAML
+                // This is **broken*, eg it doen't allow repetitions. But Elysium need it this way
+                if( /ya?ml/.test(path.extname(templateFile)) ) {
+
+                    if(!__globalcahce){
+                        __globalcahce = contents.split('\n')
+                    }
+
+                    // Find the placeholder using the brackets - match {{key}} and {{{key}}}
+                    const daje = __globalcahce.find( (line) => {  return line.indexOf(`{{${key}}}`) > 0; });
+
+                    // Get the indentation
+                    const padding = ' '.repeat(daje.search(/\S/));
+
+                    // And waste some CPU cycles
+                    // The first element will be put with the indentation of the template.
+                    // unshift breaks the chain, returning the LENGTH instead of the new array - lol
+                    const lines = externalcontents.split('\n');
+                    const head = lines.shift();
+                    externalcontents = lines.map(s => `${padding}${s}`);
+                    externalcontents.unshift(head);
+                    externalcontents = externalcontents.join('\n');
+                }
+
+                return {key, externalcontents}
+            })
         )
     });
 
