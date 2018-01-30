@@ -50,8 +50,6 @@ NodeCF.prototype.buildTemplate = function () {
             // The template may specify additional stages
             data.metadata.aws.template.stages = [].concat(data.metadata.aws.template.stages || [], this.options.stages || []);
 
-            data.metadata.aws.template.daje = "lazio";
-            
             // Stages can be used in the template metadata itself, so pass the to mustache
             data.metadata = JSON.parse(Mustache.render(JSON.stringify(data.metadata),data.metadata.aws.template));   // Al limite dell'incesto....
 

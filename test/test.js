@@ -6,6 +6,10 @@ const Promise = require("bluebird");
 const readFile = Promise.promisify(require("fs").readFile);
 require('dotenv').config();
 
+if(!process.env.AWS_ACCESS_KEY_ID) {
+    process.env.AWS_PROFILE = 'elysium';
+}
+
 describe('Full Test', function() {
 
     it('Parse a JSON input', function() {
@@ -64,7 +68,6 @@ describe('Full Test', function() {
         const cf = new NodeCF({
             inputFile: 'test/templates/simple-sns-invalid.yaml',
             action: 'createStack',
-            aws_profile: 'elysium',
             dryRun: true
         });
 
@@ -96,8 +99,7 @@ describe('Full Test', function() {
         cf = new NodeCF({
             inputFile: 'test/templates/simple-sns.yaml',
             action: 'createStack',
-            dryRun: true,
-            aws_profile: 'elysium'
+            dryRun: true
         });
 
         return cf
@@ -113,7 +115,6 @@ describe('Full Test', function() {
         cf = new NodeCF({
             inputFile: 'test/templates/externals/stack.yaml',
             action: 'createStack',
-            aws_profile: 'elysium',
             dryRun: true
         });
 
@@ -133,8 +134,7 @@ describe('Full Test', function() {
         cf = new NodeCF({
             inputFile: 'test/templates/simple-sns-function.yaml',
             action: 'createStack',
-            dryRun: true,
-            aws_profile: 'elysium'
+            dryRun: true
         });
 
         return cf
@@ -154,8 +154,7 @@ describe('Full Test', function() {
         cf = new NodeCF({
             inputFile: 'test/templates/test-simple-functions.json',
             action: 'createStack',
-            dryRun: true,
-            aws_profile: 'elysium'
+            dryRun: true
         });
 
         return cf

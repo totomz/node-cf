@@ -58,16 +58,20 @@ describe('Unit tests', function() {
                         "capabilities": ["CAPABILITY_IAM", "CAPABILITY_NAMED_IAM"],
                         "isTemplate": true,
                         "template": {
+                            "funcTime": function() {},
+                            "jsonize": function() {},
                             "name": "gamma-test-nodecf-yaml",
                             "stages": [
                                 { "name": "gamma" },
-                                { "name": "daje" }
-                            ]
+                                { "name": "daje" },
+                            ],
                         }
                     }
                 };
 
-                expect(template.metadata).to.deep.equal(expectedMetadata);
+                // Equality on function fails
+                expect(template.metadata.aws.template.name).to.be.eql(expectedMetadata.aws.template.name);
+                expect(template.metadata.aws.template.stages).to.deep.eql(expectedMetadata.aws.template.stages);
 
                 return readFile('test/fixtures/simple-sns-nostages-result.yaml')
                     .then(expectedContents => {
