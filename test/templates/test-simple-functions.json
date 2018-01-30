@@ -1,0 +1,39 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "Stack to test API Gateway",
+  "Metadata":{
+    "aws": {
+      "region": "eu-west-1",
+      "capabilities": "CAPABILITY_IAM",
+      "isTemplate": true,
+      "template": {
+        "stages": [
+          { "name": "devtotomz" },
+          { "name": "gamma" },
+          { "name": "prod" }
+        ],
+        "anObject": {
+          "aProp": {
+            "un_capitano": "c'e' solo un capitano",
+            "array": {
+              "om": "yeah",
+              "data": [1,2,3]
+            }
+            }
+          }
+        }
+      }
+    },
+  "Parameters": {
+    "domainName": {
+      "Type": "String",
+      "Default": "bla"
+    }
+  },
+  "Resources": {
+    "key": {
+      "aval": 22
+    },
+    "something": {{#jsonize}}anObject.aProp{{/jsonize}}
+  }
+}

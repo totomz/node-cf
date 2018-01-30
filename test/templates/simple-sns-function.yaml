@@ -1,0 +1,32 @@
+---
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Easy template
+Metadata:
+  # Metadata.aws is used by cftpl
+  aws:
+    # In which region the stack will be created
+    region: eu-west-1
+    # If your template requires CAPABILITIES
+    # add them here (http://docs.aws.amazon.com/AWSCloudFormation/latest/APIReference/API_CreateStack.html)
+    capabilities: CAPABILITY_IAM
+    # Not used yet
+    isTemplate: true
+    template:
+      # Then name of the Stack
+      name: xxx-test-nodecf-yaml # The name of the stack
+      stages:
+      - daje
+      - gamma
+Resources:
+# With yaml you can comment the Mustache directives and avoid breaking syntax check!
+# {{#stages}}
+  "{{.}}SnsUserAuthorized":
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: test_topic_yaml_{{.}}
+      Subscription: []
+# {{/stages}}
+  FakeSns:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: {{funcTime}}

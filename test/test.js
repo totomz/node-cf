@@ -60,10 +60,11 @@ describe('Full Test', function() {
     });
 
     it('Stop invalid CloudFormation template', function() {
-
+        this.timeout(10 * 1000);
         const cf = new NodeCF({
             inputFile: 'test/templates/simple-sns-invalid.yaml',
             action: 'createStack',
+            aws_profile: 'elysium',
             dryRun: true
         });
 
@@ -95,7 +96,8 @@ describe('Full Test', function() {
         cf = new NodeCF({
             inputFile: 'test/templates/simple-sns.yaml',
             action: 'createStack',
-            dryRun: true
+            dryRun: true,
+            aws_profile: 'elysium'
         });
 
         return cf
@@ -111,6 +113,7 @@ describe('Full Test', function() {
         cf = new NodeCF({
             inputFile: 'test/templates/externals/stack.yaml',
             action: 'createStack',
+            aws_profile: 'elysium',
             dryRun: true
         });
 
@@ -123,6 +126,46 @@ describe('Full Test', function() {
                 const tpl = YAML.parse(data.contents);
                 expect(tpl.Resources.HttpApi.Properties.Body.paths['/list_booking/{userID}'].get.summary).to.be.equal('list of bookings for a given user ID.');
             })
+    });
+
+    it('Expose function getTime()', function() {
+
+        cf = new NodeCF({
+            inputFile: 'test/templates/simple-sns-function.yaml',
+            action: 'createStack',
+            dryRun: true,
+            aws_profile: 'elysium'
+        });
+
+        return cf
+            .buildTemplate()
+            .then(template => { return cf.saveTempalteToTempFile(template); })
+            .then(data => {
+                return cf.validateTemplate(data); })
+            .then(data => {
+                const tpl = YAML.parse(data.contents);
+                console.log(tpl.Resources.FakeSns.Properties.TopicName);
+                expect(tpl.Resources.FakeSns.Properties.TopicName).to.be.a('number');
+            });
+    });
+
+    it('Expose function jsonize()', function() {
+
+        cf = new NodeCF({
+            inputFile: 'test/templates/test-simple-functions.json',
+            action: 'createStack',
+            dryRun: true,
+            aws_profile: 'elysium'
+        });
+
+        return cf
+            .buildTemplate()
+            .then(template => { return cf.saveTempalteToTempFile(template); })
+            .then(data => {
+                const tpl = JSON.parse(data.contents);
+                expect(tpl.Resources.something.array.data).to.be.an('array');
+                expect(tpl.Resources.something.array.data.length).to.be.equal(3);
+            });
     });
 
 });

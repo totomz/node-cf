@@ -9,6 +9,7 @@ const AWS = require('aws-sdk');
 const os = require('os');
 const path = require('path');
 const YAML = require('yamljs');
+const objectPath = require("object-path");
 
 
 /**
@@ -49,8 +50,21 @@ NodeCF.prototype.buildTemplate = function () {
             // The template may specify additional stages
             data.metadata.aws.template.stages = [].concat(data.metadata.aws.template.stages || [], this.options.stages || []);
 
+            data.metadata.aws.template.daje = "lazio";
+            
             // Stages can be used in the template metadata itself, so pass the to mustache
             data.metadata = JSON.parse(Mustache.render(JSON.stringify(data.metadata),data.metadata.aws.template));   // Al limite dell'incesto....
+
+            // Built-in functions
+            data.metadata.aws.template.funcTime = function () { return new Date().getTime(); };
+            data.metadata.aws.template.jsonize = function () {
+                return function(val, render) {
+
+                    const obj = objectPath.get(data.metadata.aws.template, val);
+
+                    return render(JSON.stringify(obj));
+                };
+            };
 
             if(data.metadata.aws.capabilities && typeof data.metadata.aws.capabilities === 'string') {
                 data.metadata.aws.capabilities = data.metadata.aws.capabilities.split(" ");
