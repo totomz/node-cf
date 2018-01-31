@@ -20,6 +20,8 @@ The templating engine is [Mustache](https://mustache.github.io/), refer to Musta
 * Check `test/templates/simple-sns.yaml` for a fully documented how-to write a template
 * Check `test/gtemplates/test-api-gateway/stack.tpl` to see how to load external files in the template
 
+For large templates it is possible to upload the stack generated to S3 by adding the property `Metadata.aws.template.__use_s3=bucket` . See `test/templates/simple-sns-s3-live.yaml`
+
 ## Custom functions
 The following functions can be used inside a template:
 * `{{funcTime}}`: returns the value of `new Date().getTime()` - @see `simple-sns-function.yaml`

@@ -94,6 +94,28 @@ describe('Full Test', function() {
             .then(data => { expect(data.contents).to.be.a('string'); })
     });
 
+    it('Create a CloudFormation stack using s3', function(){
+        this.timeout(300 * 1000);
+
+        cf = new NodeCF({
+            inputFile: 'test/templates/simple-sns-s3-live.yaml',
+            action: 'createStack'
+        });
+
+        return cf
+            .buildTemplate()
+            .then(template => { return cf.saveTempalteToTempFile(template); })
+            .then(data => { return cf.validateTemplate(data); })
+            .then(data => { return cf.saveToCloudFormation(data); })
+            .then(data => {
+                console.log('Wating stack to be created');
+                return new AWS.CloudFormation({ region: 'eu-west-1' }).waitFor('stackCreateComplete', {StackName: 'xxx-test-nodecf-yaml'}).promise();
+            })
+            .then(data => {
+                console.log('Deleting test stack');
+                return new AWS.CloudFormation({ region: 'eu-west-1' }).deleteStack({StackName: 'xxx-test-nodecf-yaml'}).promise(); })
+    });
+
     it('Create a CloudFormation stack - YAML', function(){
 
         cf = new NodeCF({
