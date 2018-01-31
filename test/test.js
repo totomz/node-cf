@@ -95,6 +95,11 @@ describe('Full Test', function() {
     });
 
     it('Create a CloudFormation stack using s3', function(){
+
+        if(process.env.TRAVIS){
+            return Promise.resolve('Test disabled in Travis-ci');
+        }
+
         this.timeout(300 * 1000);
 
         cf = new NodeCF({
