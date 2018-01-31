@@ -1,0 +1,11 @@
+{
+  "swagger": "2.0-lol",
+  "schemes": [ "https" ],
+  "/tags/r/{id}": {
+    "get": {
+      "summary": "Return the list of tags associated to the specified resource",
+      "responses": {{#jsonizeEscapeQuotes}}swagger.defaultResponses{{/jsonizeEscapeQuotes}},
+      "type": "aws"
+    }
+  }
+}

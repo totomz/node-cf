@@ -167,4 +167,21 @@ describe('Full Test', function() {
             });
     });
 
+    it('Expose function jsonize() with externals', function() {
+
+        cf = new NodeCF({
+            inputFile: 'test/templates/test-api-gateway/stack-functions.tpl',
+            action: 'createStack',
+            dryRun: true
+        });
+
+        return cf
+            .buildTemplate()
+            .then(template => { return cf.saveTempalteToTempFile(template); })
+            .then(data => {
+                const tpl = JSON.parse(data.contents);
+                expect(tpl.Resources.Elyapi.Properties.Body['/tags/r/{id}'].get.responses['400'].description).to.be.equal("400 response");
+            });
+    });
+
 });

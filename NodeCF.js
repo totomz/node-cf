@@ -46,23 +46,54 @@ NodeCF.prototype.buildTemplate = function () {
         .then(data => {return this.loadExternals(this.options.inputFile, data)})
         .then(data => {
 
+            // These functions can be called from the template, and can access the metadata template
+            const __builtinFunctions = {
+                funcTime: function () { return new Date().getTime(); },
+                jsonize: function () {
+                    return function(val, render) {
+                        const obj = objectPath.get(data.metadata.aws.template, val);
+                        return render(JSON.stringify(obj));
+                    };
+                },
+                jsonizeEscapeQuotes: function () {
+                    return function (val, render) {
+                        const obj = objectPath.get(data.metadata.aws.template, val);
+                        val = JSON.stringify(obj);
+                        return render(val.replace(/"/g, '\\"'));
+                    };
+                },
+                escapeQuotes: function() {
+                    return function(val, render) {
+                        return val.replace(/"/g, '\\"');
+                    };
+                }
+            };
+
             // "stages" are particular elements that we want to add to the template metadata.
             // The template may specify additional stages
             data.metadata.aws.template.stages = [].concat(data.metadata.aws.template.stages || [], this.options.stages || []);
 
-            // Stages can be used in the template metadata itself, so pass the to mustache
-            data.metadata = JSON.parse(Mustache.render(JSON.stringify(data.metadata),data.metadata.aws.template));   // Al limite dell'incesto....
-
-            // Built-in functions
             data.metadata.aws.template.funcTime = function () { return new Date().getTime(); };
-            data.metadata.aws.template.jsonize = function () {
-                return function(val, render) {
 
-                    const obj = objectPath.get(data.metadata.aws.template, val);
 
-                    return render(JSON.stringify(obj));
-                };
-            };
+            /*
+                data.metadata contains the variable ("mustache view") that will be subsituted in the template.
+                We want to have variables also in the variables (eg: it should be possible to define something like {a: "{{b}} Tom!", b:"hy"})
+                Also, externals may contains variables to be interpolated.
+
+                This line of code take the metadata, converts them to text, and apply the mustache view/render using the metadata itself.
+                The problem are the builtinFunctions, that are striped away when the template is rendered. So we need to add them twice
+
+                The other problem is taht the externals are defined as STRING, not objects.
+             */
+            data.metadata.aws.template = Object.assign(data.metadata.aws.template, __builtinFunctions);
+            const metadata = data.metadata;
+            const metadataAsString = JSON.stringify(metadata);
+            const metadataRendered = Mustache.render(metadataAsString,data.metadata.aws.template);
+            data.metadata = JSON.parse(metadataRendered);
+
+            // Built-in functions - again
+            data.metadata.aws.template = Object.assign(data.metadata.aws.template, __builtinFunctions);
 
             if(data.metadata.aws.capabilities && typeof data.metadata.aws.capabilities === 'string') {
                 data.metadata.aws.capabilities = data.metadata.aws.capabilities.split(" ");

@@ -23,7 +23,8 @@ The templating engine is [Mustache](https://mustache.github.io/), refer to Musta
 ## Custom functions
 The following functions can be used inside a template:
 * `{{funcTime}}`: returns the value of `new Date().getTime()` - @see `simple-sns-function.yaml`
-* `{{#jsonize}}a.key{{/jsonize}`: Return the json representation of the given key - @see `test-simple-functions.json`
+* `{{#jsonize}}a.key{{/jsonize}}`: Return the json representation of the given key - @see `test-simple-functions.json`
+* `{{#jsonizeEscapeQuotes}}a.key{{/jsonizeEscapeQuotes}},`: serialize object `a.key` in JSON and escape all the quotes (which means, convert the object in a string that you can include in other strings. @see `/test/templates/test-api-gateway/stack-functions.tpl`)
 
 Notes:
 * The name of the stack is in the template metadata
