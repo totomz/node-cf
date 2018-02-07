@@ -110,9 +110,28 @@ NodeCF.prototype.validateTemplate = function(data) {
         AWS.config.credentials = new AWS.SharedIniFileCredentials({profile: this.options.aws_profile});
     }
 
-    return new AWS.CloudFormation({ region: metadata.aws.region }).validateTemplate({
-        TemplateBody: contents
-    }).promise().then(() => {return data;});
+    if(metadata.aws.template.__use_s3) {
+        console.log("Uploading template to S3");
+        const templateKey = `cftpl/${metadata.aws.template.name}`;
+        const params = {
+            Bucket: metadata.aws.template.__use_s3,
+            Key: templateKey,
+            Body: contents
+        };
+        return new AWS.S3({ region: metadata.aws.region })
+            .upload(params).promise()
+            .then(s3 =>{
+                console.log("Template uploaded to S3. Validating CloudFront Stack");
+                return new AWS.CloudFormation({ region: metadata.aws.region }).validateTemplate({
+                    TemplateURL: s3.Location
+                }).promise().then(() => {return data;});
+            });
+    }
+    else {
+        return new AWS.CloudFormation({ region: metadata.aws.region }).validateTemplate({
+            TemplateBody: contents
+        }).promise().then(() => {return data;});
+    }
 };
 
 /**
@@ -148,7 +167,7 @@ NodeCF.prototype.saveToCloudFormation = function(data) {
 
     if(templateMeta.aws.template.__use_s3) {
         console.log("Uploading template to S3");
-        const templateKey = `cftpl/${templateMeta.aws.template.name}-${new Date().getTime()}`;
+        const templateKey = `cftpl/${templateMeta.aws.template.name}`;
         const params = {
             Bucket: templateMeta.aws.template.__use_s3,
             Key: templateKey,
@@ -164,8 +183,6 @@ NodeCF.prototype.saveToCloudFormation = function(data) {
                     TemplateURL: s3.Location
                 }).promise();
             });
-
-        return Promise.reject(new Error("[BadTemplate] Required field 'Metadata.aws.template.name' not found"))
     }
 
     const StackName =  templateMeta.aws.template.name; // || path.dirname(templateFile).split(path.sep).pop().match(/(?=[a-z]).*/)[0];
