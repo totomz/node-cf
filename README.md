@@ -4,7 +4,7 @@
 `cftpl` is a commandline utility to add a template engine ([Mustache](https://mustache.github.io/)) to [AWS CloudFormation](https://aws.amazon.com/it/cloudformation)
 
 # Usage
-1. Install: `npm install -g cftpl`
+1. Install: `npm install -g @my-ideas/cftpl`
 2. Execution: `cftpl -h` prints all the options, which are
 
 * `--create <path>`: Create a CF stack using the template file at the specified path
