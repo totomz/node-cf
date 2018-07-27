@@ -168,34 +168,51 @@ NodeCF.prototype.saveToCloudFormation = function(data) {
         AWS.config.credentials = new AWS.SharedIniFileCredentials({profile: this.options.aws_profile});
     }
 
-    if(templateMeta.aws.template.__use_s3) {
-        console.log("Uploading template to S3");
-        const templateKey = `cftpl/${templateMeta.aws.template.name}`;
-        const params = {
-            Bucket: templateMeta.aws.template.__use_s3,
-            Key: templateKey,
-            Body: contents
-        };
-        return new AWS.S3({ region: templateMeta.aws.region })
-            .upload(params).promise()
-            .then(s3 =>{
-                console.log("Template uploaded to S3. Processing CloudFront Stack");
-                return new AWS.CloudFormation({ region: templateMeta.aws.region })[this.options.action]({
-                    StackName: templateMeta.aws.template.name,
-                    Capabilities: templateMeta.aws.capabilities,
-                    TemplateURL: s3.Location
-                }).promise();
-            });
-    }
+    // Upsert!
+    return this.cfClient.describeStacks({StackName: templateMeta.aws.template.name}).promise()
+        .then(res => {
+            // The stack exists - update!
+            this.waitForAcion = 'stackUpdateComplete';      // Round round get around, I (work)around, yeah
+            return 'updateStack';
+        })
+        .catch(err => {
+            // It is a brand new stack
+            this.waitForAcion = 'stackCreateComplete';      // Round round get around, I (work)around, yeah
+            return 'createStack';
+        })
+        .then(action => {
 
-    const StackName =  templateMeta.aws.template.name; // || path.dirname(templateFile).split(path.sep).pop().match(/(?=[a-z]).*/)[0];
-    const TemplateBody = contents;
+            // La morte
+            if(templateMeta.aws.template.__use_s3) {
+                console.log("Uploading template to S3");
+                const templateKey = `cftpl/${templateMeta.aws.template.name}`;
+                const params = {
+                    Bucket: templateMeta.aws.template.__use_s3,
+                    Key: templateKey,
+                    Body: contents
+                };
+                return new AWS.S3({ region: templateMeta.aws.region })
+                    .upload(params).promise()
+                    .then(s3 =>{
+                        console.log("Template uploaded to S3. Processing CloudFront Stack");
+                        return this.cfClient[action]({
+                            StackName: templateMeta.aws.template.name,
+                            Capabilities: templateMeta.aws.capabilities,
+                            TemplateURL: s3.Location
+                        }).promise();
+                    });
+            }
 
-    return new AWS.CloudFormation({ region: templateMeta.aws.region })[this.options.action]({
-        StackName,
-        Capabilities: templateMeta.aws.capabilities,
-        TemplateBody
-    }).promise();
+            const StackName =  templateMeta.aws.template.name; // || path.dirname(templateFile).split(path.sep).pop().match(/(?=[a-z]).*/)[0];
+            const TemplateBody = contents;
+
+            return this.cfClient[action]({
+                StackName,
+                Capabilities: templateMeta.aws.capabilities,
+                TemplateBody
+            }).promise();
+
+        });
 };
 
 /**
@@ -218,8 +235,7 @@ NodeCF.prototype.saveTempalteToTempFile = function(data){
 NodeCF.prototype.waitForIt = function(data) {
     console.log("Waiting for the stack to succeed");
     return new Promise( (resolve, reject) => {
-        console.log(data.StackId);
-        this.cfClient.waitFor('stackCreateComplete', {StackName: data.StackId}, (err, res) => {
+        this.cfClient.waitFor(this.waitForAcion, {StackName: data.StackId}, (err, res) => {
             if(err) {
                 return reject(err);
             }
