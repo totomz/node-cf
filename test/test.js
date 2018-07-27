@@ -206,8 +206,27 @@ describe('Full Test', function() {
             .buildTemplate()
             .then(template => { return cf.saveTempalteToTempFile(template); })
             .then(data => {
-                const tpl = JSON.parse(data.contents);
+                const tpl = YAML.parse(data.contents);
                 expect(tpl.Resources.Elyapi.Properties.Body['/tags/r/{id}'].get.responses['400'].description).to.be.equal("400 response");
+            });
+    });
+
+    it('Handle CloudFormation parameters', function() {
+
+        cf = new NodeCF({
+            inputFile: 'test/templates/simple-sns-params.yaml',
+            action: 'createStack',
+            dryRun: true
+        });
+
+        return cf
+            .buildTemplate()
+            .then(template => {
+                return cf.saveTempalteToTempFile(template); })
+            .then(data => {
+                const tpl = JSON.parse(data.contents);
+                expect(tpl.Resources.something.array.data).to.be.an('array');
+                expect(tpl.Resources.something.array.data.length).to.be.equal(3);
             });
     });
 

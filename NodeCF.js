@@ -110,6 +110,9 @@ NodeCF.prototype.validateTemplate = function(data) {
         AWS.config.credentials = new AWS.SharedIniFileCredentials({profile: this.options.aws_profile});
     }
 
+    // Rimani si tucco, e' un barbatrucco!
+    this.cfClient = new AWS.CloudFormation({ region: metadata.aws.region });
+
     if(metadata.aws.template.__use_s3) {
         console.log("Uploading template to S3");
         const templateKey = `cftpl/${metadata.aws.template.name}`;
@@ -122,13 +125,13 @@ NodeCF.prototype.validateTemplate = function(data) {
             .upload(params).promise()
             .then(s3 =>{
                 console.log("Template uploaded to S3. Validating CloudFront Stack");
-                return new AWS.CloudFormation({ region: metadata.aws.region }).validateTemplate({
+                return this.cfClient.validateTemplate({
                     TemplateURL: s3.Location
                 }).promise().then(() => {return data;});
             });
     }
     else {
-        return new AWS.CloudFormation({ region: metadata.aws.region }).validateTemplate({
+        return this.cfClient.validateTemplate({
             TemplateBody: contents
         }).promise().then(() => {return data;});
     }
@@ -209,6 +212,23 @@ NodeCF.prototype.saveTempalteToTempFile = function(data){
         .then(data => {
             return {metadata, contents, tempFile}
         });
+};
+
+
+NodeCF.prototype.waitForIt = function(data) {
+    console.log("Waiting for the stack to succeed");
+    return new Promise( (resolve, reject) => {
+        console.log(data.StackId);
+        this.cfClient.waitFor('stackCreateComplete', {StackName: data.StackId}, (err, res) => {
+            if(err) {
+                return reject(err);
+            }
+            else {
+                return resolve(res); // Return a json
+            }
+        })
+
+    });
 };
 
 /**

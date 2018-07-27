@@ -1,0 +1,27 @@
+---
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Easy template
+Metadata:
+  aws:
+    region: eu-west-1
+    capabilities: CAPABILITY_IAM
+    isTemplate: true
+    template:
+      name: xxx-test-nodecf-yaml # The name of the stack
+      stages:
+      - daje
+      - gamma
+
+Parameters:
+  TopicName:
+    Type: String
+    Description: >
+      A required parameter
+    Default: default
+
+Resources:
+  SnsTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: !Sub "daje-${TopicName}"
+      Subscription: []

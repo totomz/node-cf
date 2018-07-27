@@ -13,20 +13,14 @@ Metadata:
     isTemplate: true
     template:
       # Then name of the Stack
-      name: xxx-test-nodecf-yaml # The name of the stack
-      stages:
-      - daje
-      - gamma
+      name: xxx4-test-nodecf-yaml # The name of the stack
+      stage: "{{stages.0.name}}"
+      innerParam: "daje-{{stage}}-daje"
+
 Resources:
 # With yaml you can comment the Mustache directives and avoid breaking syntax check!
-# {{#stages}}
-  "{{.}}SnsUserAuthorized":
+  "{{stage}}SnsUserAuthorized":
     Type: AWS::SNS::Topic
     Properties:
-      TopicName: test_topic_yaml_{{.}}
+      TopicName: {{name}}
       Subscription: []
-# {{/stages}}
-  FakeSns:
-    Type: AWS::SNS::Topic
-    Properties:
-      TopicName: xxxlol_yaml
