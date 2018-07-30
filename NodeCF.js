@@ -215,6 +215,50 @@ NodeCF.prototype.saveToCloudFormation = function(data) {
         });
 };
 
+NodeCF.prototype.createChangeset = function(data) {
+
+    const templateMeta = data.metadata;
+    const changesetRequest = {
+        StackName: templateMeta.aws.template.name,
+        ChangeSetName: `${templateMeta.aws.template.name}-${Date.now()}`,
+        Capabilities: [ 'CAPABILITY_IAM', 'CAPABILITY_NAMED_IAM' ]
+    };
+
+    let initRequest;
+
+
+    if(templateMeta.aws.template.__use_s3) {
+        initRequest = new AWS.S3({ region: templateMeta.aws.region })
+                .upload({
+                    Bucket: templateMeta.aws.template.__use_s3,
+                    Key: `cftpl/${templateMeta.aws.template.name}`,
+                    Body: data.contents
+                }).promise()
+                .then(s3 =>{
+                    changesetRequest.TemplateURL = s3.Location;
+                    return changesetRequest;
+                });
+    }
+    else {
+        initRequest = new Promise((resolve, reject) => {
+            changesetRequest.TemplateBody = data.contents;
+            return resolve(changesetRequest);
+        })
+    }
+
+    return initRequest
+        .catch(err => {
+            console.log("mmm");
+            console.log(err);
+        })
+        .then(params => {
+            console.log(`Creating ChangeSet [${params.ChangeSetName}]`);
+            this.waitForAcion = 'changeSetCreateComplete';
+            return this.cfClient.createChangeSet(params).promise();
+        });
+
+};
+
 /**
  *
  * @param template {string} The template
@@ -234,8 +278,15 @@ NodeCF.prototype.saveTempalteToTempFile = function(data){
 
 NodeCF.prototype.waitForIt = function(data) {
     console.log("Waiting for the stack to succeed");
+
+    let params = {StackName: data.StackId};
+
+    if(this.waitForAcion === 'changeSetCreateComplete') {
+        params = { ChangeSetName: data.Id };
+    }
+
     return new Promise( (resolve, reject) => {
-        this.cfClient.waitFor(this.waitForAcion, {StackName: data.StackId}, (err, res) => {
+        this.cfClient.waitFor(this.waitForAcion, params, (err, res) => {
             if(err) {
                 return reject(err);
             }

@@ -25,6 +25,10 @@ program
             runParams.stages = [{name: program.stage}];
         }
 
+        if(action !== 'changeset' && action !== 'create') {
+            throw new Error('Action is undefined');
+        }
+
         console.log(JSON.stringify(runParams));
 
         const cf = new NodeCF(runParams);
@@ -32,11 +36,25 @@ program
             .buildTemplate()
             .then(template => { return cf.saveTempalteToTempFile(template); })
             .then(data => { return cf.validateTemplate(data); })
-            .then(data => { return cf.saveToCloudFormation(data); })
             .then(data => {
-                return cf.waitForIt(data); })
+                let res;
+                if(action === 'changeset') {
+                    res = cf.createChangeset(data);
+                }
+                else {
+                    res = cf.saveToCloudFormation(data);
+                }
+
+                return res;
+            })
             .then(data => {
-                console.log(data)
+                return cf.waitForIt(data);
+            })
+            .catch(err => {
+                console.log(err);
+            })
+            .then(data => {
+                console.log(JSON.stringify(data, null, 4));
             });
 
 

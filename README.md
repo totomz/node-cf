@@ -5,10 +5,10 @@
 
 # Usage
 1. Install: `npm install -g @my-ideas/cftpl`
-2. Execution: `cftpl -h` prints all the options, which are
+2. Execution: `cftpl <create|changeset> <template> [--stage <stage>] [--profile <profile>]` 
 
-* `--create <path>`: Create a CF stack using the template file at the specified path
-* `--update <path>`: Update an existing CF stack using the template file at the specified path (the nme of the stack is speified in the template itself)
+Action `create` perform an upsert of the stack (create if doesn't exist, otherwise update). `changeset` create a ChangeSet with the given template
+
 * `--profile ,profile>`: the [AWS profile](http://docs.aws.amazon.com/cli/latest/userguide/cli-multiple-profiles.html) to use to call CloudFormation (this is the **only** supported credential settings)
 * `--dry-run`: if you specify this parameter, CloudFormation will not be called
 * `--stage <stage>`: Add a variable `stages: [{name: <stage>}]` to the template metadata - this is usefull to create separate stack with the same template (see the examples in `/test`)
@@ -30,3 +30,7 @@ The following functions can be used inside a template:
 
 Notes:
 * The name of the stack is in the template metadata
+
+# How to count for difference in a ChangeSet
+**BUG: If there are no changes, aws returns an error!**
+`cftpl changeset test/templates/simple-sns.yaml --profile porketta --stage gamma | tail -n +4 |  jq '.Changes | length'`
