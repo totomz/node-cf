@@ -1,0 +1,1740 @@
+swagger: '2.0'
+info:
+  version: 1.0.0
+  title: Kotenna - Porketta API
+tags:
+  - name: public
+    description: Public API 
+  - name: internal
+    description: Private API that can't be called from our clients
+consumes:
+  - application/json
+produces:
+  - application/json
+schemes:
+  - https
+paths:
+  "/daje":
+    get:
+      summary: TEST mocked endpoint.
+      description: 'API Gateway requires for mocked integratin that the request get
+          mapped to a JSON object with a statusCode property. The value of statuscode
+          is then used to map the response to return to the caller. '
+      tags:
+        - internal
+      parameters:
+        - name: name          
+          in: query
+          type: string
+        - name: code
+          in: query
+          type: string
+      responses:
+        '200':
+          description: 200 response
+          schema:
+            "$ref": "#/definitions/ErrorMessage"
+        '500':
+          description: 500 response
+          schema:
+            "$ref": "#/definitions/ErrorMessage"
+      x-amazon-apigateway-integration:
+        responses:
+          default:
+            statusCode: '200'
+            responseTemplates:
+              application/json: |
+                #set($inputRoot = $input.path('$'))
+                {
+                  "uid" : "$input.params('code')",
+                  "message" : "$input.params('name')",
+                  "una_rondine": "non fa primavera! Dajeeeee"
+                }
+          5\d{2}:
+            statusCode: '500'
+            responseTemplates:
+              application/json: |
+                #set($inputRoot = $input.path('$'))
+                {
+                  "uid" : "$input.params('code')",
+                  "message" : "$input.params('name')"
+                }
+        requestTemplates:
+          application/json: |
+            {"statusCode": $input.params('code'), "daje":"default value"}
+        passthroughBehavior: when_no_match
+        type: mock
+  "/credentials":
+    get:
+      summary: Return a list of credentials.
+      description: >
+        The credentials returned are fitlered by owner/email
+      security:
+      - auth0: []  
+      responses:
+        '200':
+          description: Return a list of credentials owned by the user
+          headers:
+            Access-Control-Allow-Headers:
+              type: string
+            Access-Control-Allow-Methods:
+              type: string
+            Access-Control-Allow-Origin:
+              type: string
+        '400':
+          description: 400 responseRequest malformed
+          schema:
+            "$ref": "#/definitions/ErrorMessage"
+        '404':
+          description: The resource does not exists
+          schema:
+            "$ref": "#/definitions/ErrorMessage"
+        '500':
+          description: Internal server error
+          schema:
+            "$ref": "#/definitions/ErrorMessage"
+      x-amazon-apigateway-request-validator: Validate query
+      x-amazon-apigateway-integration:
+        requestTemplates:
+          application/json: |
+            {
+              "method": "get",
+              "params": {
+                "email": "$context.authorizer.email",
+                "group": "$context.authorizer.group"
+              }
+            }
+        responses:
+          default:
+            statusCode: '200'
+            responseParameters:
+              method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key'"
+              method.response.header.Access-Control-Allow-Methods: "'GET,PUT,POST,DELETE'"
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+            responseTemplates:
+              application/json: "$input.body"
+          ".*\\[NOT_FOUND\\].*":
+            statusCode: '404'
+            responseTemplates:
+              application/json: |
+                {
+                  "uid" : "-1",
+                  "message" : "$input.path('$.errorMessage')"
+                }
+          "\\[BAD_REQUEST\\].*":
+            statusCode: '400'
+            responseTemplates:
+              application/json: |
+                {
+                  "uid" : "-1",
+                  "message" : "$input.path('$.errorMessage')"
+                }
+          "( |.)+":
+            statusCode: '500'
+            responseTemplates:
+              application/json: |
+                {
+                  "uid" : "-1",
+                  "message" : "Internal Error"
+                }
+        uri:
+          Fn::Join:
+          - ''
+          - - 'arn:aws:apigateway:'
+            - Ref: AWS::Region
+            - ":lambda:path/2015-03-31/functions/"
+            - Fn::ImportValue: "porketta-{{credentials-stage}}-credentials-lambda:function"
+            # - ":{{credentials-stage}}"
+            - "/invocations"
+        passthroughBehavior: never
+        httpMethod: POST
+        contentHandling: CONVERT_TO_TEXT
+        type: aws
+    put:
+      summary: Create a new credential.
+      description: >
+        Create a new credential (username,pwd) using the actual group/email as owner
+      parameters:
+        - in: body
+          schema:
+            $ref: '#/definitions/VHost'
+          required: true
+          description: The VHost definition to create or update
+      security:
+        - auth0: []
+      responses:
+        '200':
+          description: Create a new credential (username,pwd)
+          schema:
+            type:
+              "$ref": "#/definitions/Credentials"
+          headers:
+            Access-Control-Allow-Headers:
+              type: string
+            Access-Control-Allow-Methods:
+              type: string
+            Access-Control-Allow-Origin:
+              type: string
+        '400':
+          description: 400 responseRequest malformed
+          schema:
+            "$ref": "#/definitions/ErrorMessage"
+        '404':
+          description: The resource does not exists
+          schema:
+            "$ref": "#/definitions/ErrorMessage"
+        '409':
+          description: The resource already exists
+          schema:
+            "$ref": "#/definitions/ErrorMessage"
+        '500':
+          description: Internal server error
+          schema:
+            "$ref": "#/definitions/ErrorMessage"
+      x-amazon-apigateway-request-validator: Validate query
+      x-amazon-apigateway-integration:
+        requestTemplates:
+          application/json: |
+            {
+              "method": "put",
+              "params": {
+                "email": "$context.authorizer.email",
+                "name": $input.json('$.name'),
+                "group": "$context.authorizer.group"
+              }
+            }
+        responses:
+          default:
+            statusCode: '200'
+            responseParameters:
+              method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key'"
+              method.response.header.Access-Control-Allow-Methods: "'GET,PUT,POST,DELETE'"
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+            responseTemplates:
+              application/json: "$input.body"
+          ".*\\[NOT_FOUND\\].*":
+            statusCode: '404'
+            responseTemplates:
+              application/json: |
+                {
+                  "uid" : "-1",
+                  "message" : "$input.path('$.errorMessage')"
+                }
+          "\\[BAD_REQUEST\\].*":
+            statusCode: '400'
+            responseTemplates:
+              application/json: |
+                {
+                  "uid" : "-1",
+                  "message" : "$input.path('$.errorMessage')"
+                }
+          "\\[CONFLICT\\].*":
+            statusCode: '409'
+            responseTemplates:
+              application/json: |
+                {
+                  "uid" : "-1",
+                  "message" : "$input.path('$.errorMessage')"
+                }
+          "( |.)+":
+            statusCode: '500'
+            responseTemplates:
+              application/json: |
+                {
+                  "uid" : "-1",
+                  "message" : "Internal Error"
+                }
+        uri:
+          Fn::Join:
+          - ''
+          - - 'arn:aws:apigateway:'
+            - Ref: AWS::Region
+            - ":lambda:path/2015-03-31/functions/"
+            - Fn::ImportValue: "porketta-{{credentials-stage}}-credentials-lambda:function"
+            # - ":{{credentials-stage}}"
+            - "/invocations"
+        passthroughBehavior: never
+        httpMethod: POST
+        contentHandling: CONVERT_TO_TEXT
+        type: aws
+    options:
+      summary: CORS support
+      description: 'Enable CORS by returning correct headers'
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      tags:
+      - CORS
+      x-amazon-apigateway-integration:
+        type: mock
+        requestTemplates:
+          application/json: |
+            {
+              "statusCode" : 200
+            }
+        responses:
+          default:
+            statusCode: '200'
+            responseParameters:
+              method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key'"
+              method.response.header.Access-Control-Allow-Methods: "'GET,PUT,POST,DELETE'"
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+            responseTemplates:
+              application/json: "{}"
+      responses:
+        '200':
+          description: Default response for CORS method
+          headers:
+            Access-Control-Allow-Headers:
+              type: string
+            Access-Control-Allow-Methods:
+              type: string
+            Access-Control-Allow-Origin:
+              type: string
+  "/credentials/{id}":
+    parameters:
+      - name: id
+        in: path
+        type: string
+        required: true
+        description: ciao
+    delete:
+      parameters:
+        - name: id
+          in: path
+          type: string
+          required: true
+          description: ciao
+      summary: Delete a credential.
+      description: >
+        Delete a credential with id = {id} 
+      security:
+        - auth0: []   
+      responses:
+        '200':
+          description: Delete a credential with id = {id} 
+          headers:
+            Access-Control-Allow-Headers:
+              type: string
+            Access-Control-Allow-Methods:
+              type: string
+            Access-Control-Allow-Origin:
+              type: string
+        '400':
+          description: 400 responseRequest malformed
+          schema:
+            "$ref": "#/definitions/ErrorMessage"
+        '404':
+          description: The resource does not exists
+          schema:
+            "$ref": "#/definitions/ErrorMessage"
+        '500':
+          description: Internal server error
+          schema:
+            "$ref": "#/definitions/ErrorMessage"
+      x-amazon-apigateway-request-validator: Validate query
+      x-amazon-apigateway-integration:
+        requestTemplates:
+          application/json: |
+            {
+              "method": "delete",
+              "params" : {
+                "email": "$context.authorizer.email",
+                "group": "$context.authorizer.group",
+                "id": "$input.params('id')"
+              }
+            }
+        responses:
+          default:
+            statusCode: '200'
+            responseParameters:
+              method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key'"
+              method.response.header.Access-Control-Allow-Methods: "'GET,PUT,POST,DELETE'"
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+            responseTemplates:
+              application/json: "$input.body"
+          ".*\\[NOT_FOUND\\].*":
+            statusCode: '404'
+            responseTemplates:
+              application/json: |
+                {
+                  "uid" : "-1",
+                  "message" : "$input.path('$.errorMessage')"
+                }
+          "\\[BAD_REQUEST\\].*":
+            statusCode: '400'
+            responseTemplates:
+              application/json: |
+                {
+                  "uid" : "-1",
+                  "message" : "$input.path('$.errorMessage')"
+                }
+          "( |.)+":
+            statusCode: '500'
+            responseTemplates:
+              application/json: |
+                {
+                  "uid" : "-1",
+                  "message" : "Internal Error"
+                }
+        uri:
+          Fn::Join:
+          - ''
+          - - 'arn:aws:apigateway:'
+            - Ref: AWS::Region
+            - ":lambda:path/2015-03-31/functions/"
+            - Fn::ImportValue: "porketta-{{credentials-stage}}-credentials-lambda:function"
+            - "/invocations"
+        passthroughBehavior: never
+        httpMethod: POST
+        contentHandling: CONVERT_TO_TEXT
+        type: aws      
+    options:
+      summary: CORS support
+      description: 'Enable CORS by returning correct headers'
+      consumes:
+        - application/json
+      produces:
+        - application/json
+      tags:
+        - CORS
+      x-amazon-apigateway-integration:
+        type: mock
+        requestTemplates:
+          application/json: |
+            {
+              "statusCode" : 200
+            }
+        responses:
+          default:
+            statusCode: '200'
+            responseParameters:
+              method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key'"
+              method.response.header.Access-Control-Allow-Methods: "'GET,PUT,POST,DELETE'"
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+            responseTemplates:
+              application/json: "{}"
+      responses:
+        '200':
+          description: Default response for CORS method
+          headers:
+            Access-Control-Allow-Headers:
+              type: string
+            Access-Control-Allow-Methods:
+              type: string
+            Access-Control-Allow-Origin:
+              type: string
+  "/provider": 
+    get:
+      parameters:
+      - name: owner
+        in: query
+        type: string
+        required: false
+        description: Returns CloudProvider owned by a different user/team. The client must have read access.
+      tags:
+        - public
+      summary: List all CloudProviders that belongs to the current user group.
+      description: |
+        A CloudProvider represent a credential set to call the API of a specific Cloud Services vendor like AWS, Google Cloud, DigitalOcean.
+      security:
+        - auth0: []
+      responses:
+        '200':
+          description: Returns a list of providers
+          schema:
+            "$ref": "#/definitions/CloudProvider"
+          headers:
+            Access-Control-Allow-Headers:
+              type: string
+            Access-Control-Allow-Methods:
+              type: string
+            Access-Control-Allow-Origin:
+              type: string
+        '400':
+          description: Bad Request
+          schema:
+            "$ref": "#/definitions/ErrorMessage"
+          headers:
+            Access-Control-Allow-Headers:
+              type: string
+            Access-Control-Allow-Methods:
+              type: string
+            Access-Control-Allow-Origin:
+              type: string
+        '403':
+          description: Forbidden
+          schema:
+            "$ref": "#/definitions/ErrorMessage"
+          headers:
+            Access-Control-Allow-Headers:
+              type: string
+            Access-Control-Allow-Methods:
+              type: string
+            Access-Control-Allow-Origin:
+              type: string
+        '500':
+          description: Internal server error
+          schema:
+            "$ref": "#/definitions/ErrorMessage"
+          headers:
+            Access-Control-Allow-Headers:
+              type: string
+            Access-Control-Allow-Methods:
+              type: string
+            Access-Control-Allow-Origin:
+              type: string
+      x-amazon-apigateway-request-validator: Validate query
+      x-amazon-apigateway-integration:
+        requestTemplates:
+          application/json: |
+            {
+              "jsonrpc": "2.0",
+              "method": "get",
+                #if( $input.params().header.get('X-Request-ID').toString() != "" )
+                  "id": "$input.params().header.get('X-Request-ID')",
+                #else
+                  "id": "$context.requestId",
+                #end
+              "params" : {
+                "group": "$context.authorizer.group",
+                "query": {
+                  "owner": "$input.params('owner')"
+                }
+              }
+            }
+        responses:
+          default:
+            statusCode: '200'
+            responseParameters:
+              method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key'"
+              method.response.header.Access-Control-Allow-Methods: "'GET,PUT,POST,DELETE'"
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+            responseTemplates:
+              application/json: "$input.body"
+          ".*code\":400.*":
+            statusCode: '400'
+            responseTemplates:
+              application/json: |
+                #set ($err = $util.parseJson($input.path('$.errorMessage')))
+                #set ($mess = $util.escapeJavaScript($err.error.message).replaceAll("\\'","'"))
+                {
+                  "uid" : "$err.id",
+                  "message" : "$mess"
+                }
+          ".*code\":403.*":
+            statusCode: '403'
+            responseTemplates:
+              application/json: |
+                #set ($err = $util.parseJson($input.path('$.errorMessage')))
+                #set ($mess = $util.escapeJavaScript($err.error.message).replaceAll("\\'","'"))
+                {
+                  "uid" : "$err.id",
+                  "message" : "$mess"
+                }
+          ".*code\":500.*":
+            statusCode: '500'
+            responseParameters:
+              method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key'"
+              method.response.header.Access-Control-Allow-Methods: "'GET,PUT,POST,DELETE'"
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+            responseTemplates:
+              application/json: |
+                {
+                  "uid" : "-1",
+                  "message" : "Internal Error"
+                }
+        uri:
+          Fn::Join:
+          - ''
+          - - 'arn:aws:apigateway:'
+            - Ref: AWS::Region
+            - ":lambda:path/2015-03-31/functions/"
+            - Fn::ImportValue: "porketta-{{provider-stage}}-provider-lambda:function"
+            - "/invocations"
+        passthroughBehavior: never
+        httpMethod: POST
+        contentHandling: CONVERT_TO_TEXT
+        type: aws   
+    post:
+      tags: ['public']
+      summary: Create a new CloudProvider 
+      description: Create a new provider
+      parameters:
+        - name: provider
+          in: body
+          required: true
+          schema:
+            "$ref": "#/definitions/CloudProvider"
+      
+      security:
+        - auth0: []  
+      responses:
+        '200':
+          description: Create a new provider
+          schema:
+            "$ref": "#/definitions/CloudProvider"
+          headers:
+            Access-Control-Allow-Headers:
+              type: string
+            Access-Control-Allow-Methods:
+              type: string
+            Access-Control-Allow-Origin:
+              type: string
+        '400':
+          description: 400 responseRequest malformed
+          schema:
+            "$ref": "#/definitions/ErrorMessage"
+          headers:
+            Access-Control-Allow-Headers:
+              type: string
+            Access-Control-Allow-Methods:
+              type: string
+            Access-Control-Allow-Origin:
+              type: string
+        '403':
+          description: 403 Not Authorized
+          schema:
+            "$ref": "#/definitions/ErrorMessage"
+          headers:
+            Access-Control-Allow-Headers:
+              type: string
+            Access-Control-Allow-Methods:
+              type: string
+            Access-Control-Allow-Origin:
+              type: string
+        '404':
+          description: The resource does not exists
+          schema:
+            "$ref": "#/definitions/ErrorMessage"
+          headers:
+            Access-Control-Allow-Headers:
+              type: string
+            Access-Control-Allow-Methods:
+              type: string
+            Access-Control-Allow-Origin:
+              type: string
+        '500':
+          description: Internal server error
+          schema:
+            "$ref": "#/definitions/ErrorMessage"
+          headers:
+            Access-Control-Allow-Headers:
+              type: string
+            Access-Control-Allow-Methods:
+              type: string
+            Access-Control-Allow-Origin:
+              type: string
+      x-amazon-apigateway-request-validator: Validate query
+      x-amazon-apigateway-integration:
+        requestTemplates:
+          application/json: |
+            {
+              "jsonrpc": "2.0",
+              "method": "put",
+                #if( $input.params().header.get('X-Request-ID').toString() != "" )
+                  "id": "$input.params().header.get('X-Request-ID')",
+                #else
+                  "id": "$context.requestId",
+                #end
+              "params" : {
+                "group": "$context.authorizer.group",
+                "provider": $input.json('$.provider')
+              }
+            }
+
+        responses:
+          default:
+            statusCode: '200'
+            responseParameters:
+              method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key'"
+              method.response.header.Access-Control-Allow-Methods: "'GET,PUT,POST,DELETE'"
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+            responseTemplates:
+              application/json: "$input.body"
+          ".*code\":400.*":
+            statusCode: '400'
+            responseTemplates:
+              application/json: |
+                #set ($err = $util.parseJson($input.path('$.errorMessage')))
+                #set ($mess = $util.escapeJavaScript($err.error.message).replaceAll("\\'","'"))
+                {
+                  "uid" : "$err.id",
+                  "message" : "$mess"
+                }
+          ".*code\":403.*":
+            statusCode: '403'
+            responseTemplates:
+              application/json: |
+                #set ($err = $util.parseJson($input.path('$.errorMessage')))
+                #set ($mess = $util.escapeJavaScript($err.error.message).replaceAll("\\'","'"))
+                {
+                  "uid" : "$err.id",
+                  "message" : "$mess"
+                }
+          ".*code\":500.*":
+            statusCode: '500'
+            responseParameters:
+              method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key'"
+              method.response.header.Access-Control-Allow-Methods: "'GET,PUT,POST,DELETE'"
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+            responseTemplates:
+              application/json: |
+                {
+                  "uid" : "-1",
+                  "message" : "Internal Error"
+                }
+        uri:
+          Fn::Join:
+          - ''
+          - - 'arn:aws:apigateway:'
+            - Ref: AWS::Region
+            - ":lambda:path/2015-03-31/functions/"
+            - Fn::ImportValue: "porketta-{{provider-stage}}-provider-lambda:function"
+            - "/invocations"
+        passthroughBehavior: never
+        httpMethod: POST
+        contentHandling: CONVERT_TO_TEXT
+        type: aws     
+    options:
+      summary: CORS support
+      description: 'Enable CORS by returning correct headers'
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      tags:
+      - CORS
+      x-amazon-apigateway-integration:
+        type: mock
+        requestTemplates:
+          application/json: |
+            {
+              "statusCode" : 200
+            }
+        responses:
+          default:
+            statusCode: '200'
+            responseParameters:
+              method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key'"
+              method.response.header.Access-Control-Allow-Methods: "'GET,PUT,POST,DELETE'"
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+            responseTemplates:
+              application/json: "{}"
+      responses:
+        '200':
+          description: Default response for CORS method
+          headers:
+            Access-Control-Allow-Headers:
+              type: string
+            Access-Control-Allow-Methods:
+              type: string
+            Access-Control-Allow-Origin:
+              type: string
+  "/provider/{name}":
+    parameters:
+      - name: name
+        in: path
+        type: string
+        required: true
+        description: Name of the CloudProvider
+    delete:
+      summary: Delete a provider.
+      description: >
+        Delete a provider with name = {name} 
+      security:
+        - auth0: []
+      responses:
+        '200':
+          description: Returns a list of providers
+          schema:
+            "$ref": "#/definitions/CloudProvider"
+          headers:
+            Access-Control-Allow-Headers:
+              type: string
+            Access-Control-Allow-Methods:
+              type: string
+            Access-Control-Allow-Origin:
+              type: string
+        '400':
+          description: Bad Request
+          schema:
+            "$ref": "#/definitions/ErrorMessage"
+          headers:
+            Access-Control-Allow-Headers:
+              type: string
+            Access-Control-Allow-Methods:
+              type: string
+            Access-Control-Allow-Origin:
+              type: string
+        '403':
+          description: Forbidden
+          schema:
+            "$ref": "#/definitions/ErrorMessage"
+          headers:
+            Access-Control-Allow-Headers:
+              type: string
+            Access-Control-Allow-Methods:
+              type: string
+            Access-Control-Allow-Origin:
+              type: string
+        '500':
+          description: Internal server error
+          schema:
+            "$ref": "#/definitions/ErrorMessage"
+          headers:
+            Access-Control-Allow-Headers:
+              type: string
+            Access-Control-Allow-Methods:
+              type: string
+            Access-Control-Allow-Origin:
+              type: string
+
+      x-amazon-apigateway-request-validator: Validate query
+      x-amazon-apigateway-integration:
+        requestTemplates:
+          application/json: |
+            {
+              "jsonrpc": "2.0",
+              "method": "delete",
+                #if( $input.params().header.get('X-Request-ID').toString() != "" )
+                  "id": "$input.params().header.get('X-Request-ID')",
+                #else
+                  "id": "$context.requestId",
+                #end
+              "params" : {
+                "group": "$context.authorizer.group",
+                "name": "$input.params('name')"
+              }
+            }
+        responses:
+          default:
+            statusCode: '200'
+            responseParameters:
+              method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key'"
+              method.response.header.Access-Control-Allow-Methods: "'GET,PUT,POST,DELETE'"
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+            responseTemplates:
+              application/json: "$input.body"
+          ".*code\":400.*":
+            statusCode: '400'
+            responseTemplates:
+              application/json: |
+                #set ($err = $util.parseJson($input.path('$.errorMessage')))
+                #set ($mess = $util.escapeJavaScript($err.error.message).replaceAll("\\'","'"))
+                {
+                  "uid" : "$err.id",
+                  "message" : "$mess"
+                }
+          ".*code\":403.*":
+            statusCode: '403'
+            responseTemplates:
+              application/json: |
+                #set ($err = $util.parseJson($input.path('$.errorMessage')))
+                #set ($mess = $util.escapeJavaScript($err.error.message).replaceAll("\\'","'"))
+                {
+                  "uid" : "$err.id",
+                  "message" : "$mess"
+                }
+          ".*code\":500.*":
+            statusCode: '500'
+            responseParameters:
+              method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key'"
+              method.response.header.Access-Control-Allow-Methods: "'GET,PUT,POST,DELETE'"
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+            responseTemplates:
+              application/json: |
+                {
+                  "uid" : "-1",
+                  "message" : "Internal Error"
+                }
+        uri:
+          Fn::Join:
+          - ''
+          - - 'arn:aws:apigateway:'
+            - Ref: AWS::Region
+            - ":lambda:path/2015-03-31/functions/"
+            - Fn::ImportValue: "porketta-{{provider-stage}}-provider-lambda:function"
+            - "/invocations"
+        passthroughBehavior: never
+        httpMethod: POST
+        contentHandling: CONVERT_TO_TEXT
+        type: aws      
+    options:
+      summary: CORS support
+      description: 'Enable CORS by returning correct headers'
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      tags:
+      - CORS
+      x-amazon-apigateway-integration:
+        type: mock
+        requestTemplates:
+          application/json: |
+            {
+              "statusCode" : 200
+            }
+        responses:
+          default:
+            statusCode: '200'
+            responseParameters:
+              method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key'"
+              method.response.header.Access-Control-Allow-Methods: "'GET,PUT,POST,DELETE'"
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+            responseTemplates:
+              application/json: "{}"
+      responses:
+        '200':
+          description: Default response for CORS method
+          headers:
+            Access-Control-Allow-Headers:
+              type: string
+            Access-Control-Allow-Methods:
+              type: string
+            Access-Control-Allow-Origin:
+              type: string
+  "/vhost":
+    get:
+      tags: ["vhost"]
+      summary: Returns all vhost of the owner/group.
+      description: >
+        Returns all vhost owned by the group of the caller
+      security:
+      - auth0: []  
+      responses:
+        '200':
+          description: Returns all vhost of the owner/group
+          schema:
+            type: "array"
+            items:
+              "$ref": "#/definitions/VHost"
+          headers:
+            Access-Control-Allow-Headers:
+              type: string
+            Access-Control-Allow-Methods:
+              type: string
+            Access-Control-Allow-Origin:
+              type: string
+        '400':
+          description: 400 Request malformed
+          schema:
+            "$ref": "#/definitions/ErrorMessage"
+          headers:
+            Access-Control-Allow-Headers:
+              type: string
+            Access-Control-Allow-Methods:
+              type: string
+            Access-Control-Allow-Origin:
+              type: string
+        '500':
+          description: Internal server error
+          schema:
+            "$ref": "#/definitions/ErrorMessage"
+          headers:
+            Access-Control-Allow-Headers:
+              type: string
+            Access-Control-Allow-Methods:
+              type: string
+            Access-Control-Allow-Origin:
+              type: string
+      x-amazon-apigateway-request-validator: Validate query
+      x-amazon-apigateway-integration:
+        requestTemplates:
+          application/json: |
+            {
+              "jsonrpc": "2.0",
+              "method": "get",
+                #if( $input.params().header.get('X-Request-ID').toString() != "" )
+                  "id": "$input.params().header.get('X-Request-ID')",
+                #else
+                  "id": "$context.requestId",
+                #end
+              "params" : {
+                "group": "$context.authorizer.group"
+              }
+            }
+        responses:
+          default:
+            statusCode: '200'
+            responseParameters:
+              method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key'"
+              method.response.header.Access-Control-Allow-Methods: "'GET,PUT,POST,DELETE'"
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+            responseTemplates:
+              application/json: "$input.body"
+          ".*code\":400.*":
+            statusCode: '400'
+            responseParameters:
+              method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key'"
+              method.response.header.Access-Control-Allow-Methods: "'GET,PUT,POST,DELETE'"
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+            responseTemplates:
+              application/json: |
+                #set ($err = $util.parseJson($input.path('$.errorMessage')))
+                #set ($mess = $util.escapeJavaScript($err.error.message).replaceAll("\\'","'"))
+                {
+                  "uid" : "$err.id",
+                  "message" : "$mess"
+                }
+          "( |.)+":
+            statusCode: '500'
+            responseParameters:
+              method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key'"
+              method.response.header.Access-Control-Allow-Methods: "'GET,PUT,POST,DELETE'"
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+            responseTemplates:
+              application/json: |
+                {
+                  "uid" : "-1",
+                  "message" : "Internal Error"
+                }
+        uri:
+          Fn::Join:
+          - ''
+          - - 'arn:aws:apigateway:'
+            - Ref: AWS::Region
+            - ":lambda:path/2015-03-31/functions/"
+            - Fn::ImportValue: "porketta-{{vhost-stage}}-vhost-lambda:function"
+            - "/invocations"
+        passthroughBehavior: never
+        httpMethod: POST
+        contentHandling: CONVERT_TO_TEXT
+        type: aws
+    options:
+      summary: CORS support
+      description: 'Enable CORS by returning correct headers'
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      tags:
+      - CORS
+      x-amazon-apigateway-integration:
+        type: mock
+        requestTemplates:
+          application/json: |
+            {
+              "statusCode" : 200
+            }
+        responses:
+          default:
+            statusCode: '200'
+            responseParameters:
+              method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key'"
+              method.response.header.Access-Control-Allow-Methods: "'GET,PUT,POST,DELETE'"
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+            responseTemplates:
+              application/json: "{}"
+      responses:
+        '200':
+          description: Default response for CORS method
+          headers:
+            Access-Control-Allow-Headers:
+              type: string
+            Access-Control-Allow-Methods:
+              type: string
+            Access-Control-Allow-Origin:
+              type: string
+  "/vhost/{hostname}":
+    parameters:
+      - name: hostname
+        in: path
+        type: string
+        required: true
+        description: The FQDN that univocally identify this host
+      - name: X-Request-ID
+        in: header
+        type: string
+        required: false
+    put:
+      tags: ['public', 'vhost']
+      summary: Create or update a VHost.
+      description: |
+          Create or update an existing VHost, identified by its primary FQDN/hostname.
+          The property `vhost.owner` is optional. If not specified, the owner of this resource will be the group of the caller (refet to https://docs.porketta.io/auth).
+          
+          Currently, creating a resource owned by a different account is not supported and result in an HTTP 403 - Forbidden
+      parameters:
+        - name: vhost
+          in: body
+          schema:
+            $ref: '#/definitions/VHost'
+          required: true
+          description: The VHost definition to create or update
+      security:
+        - auth0: []
+      responses:
+        '200':
+          description: Resource has been created or updated
+          schema:
+            $ref: '#/definitions/VHost'
+          headers:
+            Access-Control-Allow-Headers:
+              type: string
+            Access-Control-Allow-Methods:
+              type: string
+            Access-Control-Allow-Origin:
+              type: string
+        '400':
+          description: Bad Request 
+          schema:
+            "$ref": "#/definitions/ErrorMessage"
+        '403':
+          description: Forbidden - the server understood the request, but will not fulfill it for some reason related to authorization
+          schema:
+            "$ref": "#/definitions/ErrorMessage"
+        '500':
+          description: Internal server error
+          schema:
+            "$ref": "#/definitions/ErrorMessage"
+      x-amazon-apigateway-request-validator: Validate query
+      x-amazon-apigateway-integration:
+        requestTemplates:
+          application/json: |
+            {
+              "jsonrpc": "2.0",
+              "method": "put",
+                #if( $input.params().header.get('X-Request-ID').toString() != "" )
+                  "id": "$input.params().header.get('X-Request-ID')",
+                #else
+                  "id": "$context.requestId",
+                #end
+              "params" : {
+                "group": "$context.authorizer.group",
+                "vhost": $input.json('$')
+              }
+            }
+        responses:
+          default:
+            statusCode: '200'
+            responseParameters:
+              method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key'"
+              method.response.header.Access-Control-Allow-Methods: "'GET,PUT,POST,DELETE'"
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+            responseTemplates:
+              application/json: "$input.body"
+          ".*\\[NOT_FOUND\\].*":
+            statusCode: '404'
+            responseTemplates:
+              application/json: |
+                {
+                  "uid" : "-1",
+                  "message" : "$input.path('$.errorMessage')"
+                }
+          ".*code\":400.*":
+            statusCode: '400'
+            responseTemplates:
+              application/json: |
+                #set ($err = $util.parseJson($input.path('$.errorMessage')))
+                #set ($mess = $util.escapeJavaScript($err.error.message).replaceAll("\\'","'"))
+                {
+                  "uid" : "$err.id",
+                  "message" : "$mess"
+                }
+          ".*code\":403.*":
+            statusCode: '403'
+            responseTemplates:
+              application/json: |
+                #set ($err = $util.parseJson($input.path('$.errorMessage')))
+                #set ($mess = $util.escapeJavaScript($err.error.message).replaceAll("\\'","'"))
+                {
+                  "uid" : "$err.id",
+                  "message" : "$mess"
+                }
+          ".*code\":500.*":
+            statusCode: '500'
+            responseTemplates:
+              application/json: |
+                #set ($err = $util.parseJson($input.path('$.errorMessage')))
+                {
+                  #if( $err.id.toString() != "" )
+                  "uid": "$err.id",
+                  #else
+                   "uid": "-100",
+                  #end
+                  "message" : "Unexpected Internal Error"
+                }
+        uri:
+          Fn::Join:
+          - ''
+          - - 'arn:aws:apigateway:'
+            - Ref: AWS::Region
+            - ":lambda:path/2015-03-31/functions/"
+            - Fn::ImportValue: "porketta-{{vhost-stage}}-vhost-lambda:function"
+            - "/invocations"
+        passthroughBehavior: never
+        httpMethod: POST
+        contentHandling: CONVERT_TO_TEXT
+        type: aws
+    delete:
+      tags: ["public", "vhost"]
+      summary: Delete a vhost.
+      security:
+        - auth0: []
+      responses:
+        '200':
+          description: Hostname has been deleted
+          headers:
+            Access-Control-Allow-Headers:
+              type: string
+            Access-Control-Allow-Methods:
+              type: string
+            Access-Control-Allow-Origin:
+              type: string
+        '400':
+          description: 400 responseRequest malformed
+          schema:
+            "$ref": "#/definitions/ErrorMessage"
+          headers:
+            Access-Control-Allow-Headers:
+              type: string
+            Access-Control-Allow-Methods:
+              type: string
+            Access-Control-Allow-Origin:
+              type: string
+        '500':
+          description: Internal server error
+          schema:
+            "$ref": "#/definitions/ErrorMessage"
+          headers:
+            Access-Control-Allow-Headers:
+              type: string
+            Access-Control-Allow-Methods:
+              type: string
+            Access-Control-Allow-Origin:
+              type: string
+      x-amazon-apigateway-request-validator: Validate query
+      x-amazon-apigateway-integration:
+        requestTemplates:
+          application/json: |
+            {
+              "jsonrpc": "2.0",
+              "method": "delete",
+                #if( $input.params().header.get('X-Request-ID').toString() != "" )
+                  "id": "$input.params().header.get('X-Request-ID')",
+                #else
+                  "id": "$context.requestId",
+                #end
+              "params" : {
+                "group": "$context.authorizer.group",
+                "hostname": "$input.params('hostname')"
+              }
+            }
+        responses:
+          default:
+            statusCode: '200'
+            responseParameters:
+              method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key'"
+              method.response.header.Access-Control-Allow-Methods: "'GET,PUT,POST,DELETE'"
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+            responseTemplates:
+              application/json: "$input.body"
+          ".*code\":400.*":
+            statusCode: '400'
+            responseTemplates:
+              application/json: |
+                #set ($err = $util.parseJson($input.path('$.errorMessage')))
+                #set ($mess = $util.escapeJavaScript($err.error.message).replaceAll("\\'","'"))
+                {
+                  "uid" : "$err.id",
+                  "message" : "$mess"
+                }
+          ".*code\":500.*":
+            statusCode: '500'
+            responseTemplates:
+              application/json: |
+                #set ($err = $util.parseJson($input.path('$.errorMessage')))
+                {
+                  #if( $err.id.toString() != "" )
+                  "uid": "$err.id",
+                  #else
+                   "uid": "-100",
+                  #end
+                  "message" : "Unexpected Internal Error"
+                }
+        uri:
+          Fn::Join:
+          - ''
+          - - 'arn:aws:apigateway:'
+            - Ref: AWS::Region
+            - ":lambda:path/2015-03-31/functions/"
+            - Fn::ImportValue: "porketta-{{vhost-stage}}-vhost-lambda:function"
+            - "/invocations"
+        passthroughBehavior: never
+        httpMethod: POST
+        contentHandling: CONVERT_TO_TEXT
+        type: aws
+    options:
+      summary: CORS support
+      description: 'Enable CORS by returning correct headers'
+      consumes: [application/json]
+      produces: [application/json]
+      tags: [CORS]
+      x-amazon-apigateway-integration:
+        type: mock
+        requestTemplates:
+          application/json: |
+            {
+              "statusCode" : 200
+            }
+        responses:
+          default:
+            statusCode: '200'
+            responseParameters:
+              method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key'"
+              method.response.header.Access-Control-Allow-Methods: "'GET,PUT,POST,DELETE'"
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+            responseTemplates:
+              application/json: "{}"
+      responses:
+        '200':
+          description: Default response for CORS method
+          headers:
+            Access-Control-Allow-Headers:
+              type: string
+            Access-Control-Allow-Methods:
+              type: string
+            Access-Control-Allow-Origin:
+              type: string
+  "/instances/{provider}":
+    parameters:
+      - name: provider
+        in: path
+        required: true
+        description: Id of the CLoudProvider from which to load the available instances
+    get:
+      summary: Return a list of availbale instance for the CLoudProbider
+      security:
+        - auth0: []
+      responses:
+        '200':
+          description: Returns a list of Instances
+          schema:
+            type: "array"
+            items:
+              "$ref": "#/definitions/Instance"
+          headers:
+            Access-Control-Allow-Headers:
+              type: string
+            Access-Control-Allow-Methods:
+              type: string
+            Access-Control-Allow-Origin:
+              type: string
+        '400':
+          description: Bad Request
+          schema:
+            "$ref": "#/definitions/ErrorMessage"
+          headers:
+            Access-Control-Allow-Headers:
+              type: string
+            Access-Control-Allow-Methods:
+              type: string
+            Access-Control-Allow-Origin:
+              type: string
+        '403':
+          description: Forbidden
+          schema:
+            "$ref": "#/definitions/ErrorMessage"
+          headers:
+            Access-Control-Allow-Headers:
+              type: string
+            Access-Control-Allow-Methods:
+              type: string
+            Access-Control-Allow-Origin:
+              type: string
+        '404':
+          description: Not found - The specified CloudProvider does not exists
+          schema:
+            "$ref": "#/definitions/ErrorMessage"
+          headers:
+            Access-Control-Allow-Headers:
+              type: string
+            Access-Control-Allow-Methods:
+              type: string
+            Access-Control-Allow-Origin:
+              type: string
+        '500':
+          description: Internal server error
+          schema:
+            "$ref": "#/definitions/ErrorMessage"
+          headers:
+            Access-Control-Allow-Headers:
+              type: string
+            Access-Control-Allow-Methods:
+              type: string
+            Access-Control-Allow-Origin:
+              type: string
+      x-amazon-apigateway-request-validator: Validate query
+      x-amazon-apigateway-integration:
+        requestTemplates:
+          application/json: |
+            {
+              "jsonrpc": "2.0",
+              "method": "getInstances",
+                #if( $input.params().header.get('X-Request-ID').toString() != "" )
+                  "id": "$input.params().header.get('X-Request-ID')",
+                #else
+                  "id": "$context.requestId",
+                #end
+              "params" : {
+                "group": "$context.authorizer.group",
+                "authToken": "$input.params('Authorization')",
+                "provider": "$input.params('provider')"
+              }
+            }
+        responses:
+          default:
+            statusCode: '200'
+            responseParameters:
+              method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key'"
+              method.response.header.Access-Control-Allow-Methods: "'GET,PUT,POST,DELETE'"
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+            responseTemplates:
+              application/json: "$input.json('$.result')"
+          ".*code\":400.*":
+            statusCode: '400'
+            responseTemplates:
+              application/json: |
+                #set ($err = $util.parseJson($input.path('$.errorMessage')))
+                #set ($mess = $util.escapeJavaScript($err.error.message).replaceAll("\\'","'"))
+                {
+                  "uid" : "$err.id",
+                  "message" : "$mess"
+                }
+          ".*code\":403.*":
+            statusCode: '403'
+            responseTemplates:
+              application/json: |
+                #set ($err = $util.parseJson($input.path('$.errorMessage')))
+                #set ($mess = $util.escapeJavaScript($err.error.message).replaceAll("\\'","'"))
+                {
+                  "uid" : "$err.id",
+                  "message" : "$mess"
+                }
+          ".*code\":404.*":
+            statusCode: '404'
+            responseTemplates:
+              application/json: |
+                #set ($err = $util.parseJson($input.path('$.errorMessage')))
+                #set ($mess = $util.escapeJavaScript($err.error.message).replaceAll("\\'","'"))
+                {
+                  "uid" : "$err.id",
+                  "message" : "$mess"
+                }
+          ".*code\":500.*":
+            statusCode: '500'
+            responseParameters:
+              method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key'"
+              method.response.header.Access-Control-Allow-Methods: "'GET,PUT,POST,DELETE'"
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+            responseTemplates:
+              application/json: |
+                #set ($err = $util.parseJson($input.path('$.errorMessage')))
+                #set ($mess = $util.escapeJavaScript($err.error.message).replaceAll("\\'","'"))
+                {
+                  "uid" : "$err.id",
+                  "message" : "$mess"
+                }
+        uri:
+          Fn::Join:
+          - ''
+          - - 'arn:aws:apigateway:'
+            - Ref: AWS::Region
+            - ":lambda:path/2015-03-31/functions/"
+            - Fn::ImportValue: "porketta-{{instance-stage}}-instance-lambda:function"
+            - "/invocations"
+        passthroughBehavior: never
+        httpMethod: POST
+        contentHandling: CONVERT_TO_TEXT
+        type: aws
+  "/instances/{provider}/{instance}":
+    parameters:
+      - name: provider
+        in: path
+        required: true
+        description: Id of the CLoudProvider from which to load the available instances
+      - name: instance
+        in: path
+        required: true
+        description: Id of the instance 
+    get:
+      summary: Return a JSON object that represent a "tpl" for the given instance.
+      description: >
+        A `tpl` represent a cloud server. This object is vendor-specific and it is required to create a VHost resource
+      security:
+        - auth0: []
+      responses:
+        '200':
+          description: Return a JSON object representing a tpl
+          schema:            
+            type: object
+          headers:
+            Access-Control-Allow-Headers:
+              type: string
+            Access-Control-Allow-Methods:
+              type: string
+            Access-Control-Allow-Origin:
+              type: string
+        '400':
+          description: Bad Request
+          schema:
+            "$ref": "#/definitions/ErrorMessage"
+          headers:
+            Access-Control-Allow-Headers:
+              type: string
+            Access-Control-Allow-Methods:
+              type: string
+            Access-Control-Allow-Origin:
+              type: string
+        '403':
+          description: Forbidden
+          schema:
+            "$ref": "#/definitions/ErrorMessage"
+          headers:
+            Access-Control-Allow-Headers:
+              type: string
+            Access-Control-Allow-Methods:
+              type: string
+            Access-Control-Allow-Origin:
+              type: string
+        '404':
+          description: Not found - The specified CloudProvider does not exists
+          schema:
+            "$ref": "#/definitions/ErrorMessage"
+          headers:
+            Access-Control-Allow-Headers:
+              type: string
+            Access-Control-Allow-Methods:
+              type: string
+            Access-Control-Allow-Origin:
+              type: string
+        '500':
+          description: Internal server error
+          schema:
+            "$ref": "#/definitions/ErrorMessage"
+          headers:
+            Access-Control-Allow-Headers:
+              type: string
+            Access-Control-Allow-Methods:
+              type: string
+            Access-Control-Allow-Origin:
+              type: string
+      x-amazon-apigateway-request-validator: Validate query
+      x-amazon-apigateway-integration:
+        requestTemplates:
+          application/json: |
+            {
+              "jsonrpc": "2.0",
+              "method": "getTpl",
+                #if( $input.params().header.get('X-Request-ID').toString() != "" )
+                  "id": "$input.params().header.get('X-Request-ID')",
+                #else
+                  "id": "$context.requestId",
+                #end
+              "params" : {
+                "group": "$context.authorizer.group",
+                "authToken": "$input.params('Authorization')",
+                "provider": "$input.params('provider')",
+                "instanceId": "$input.params('instance')"
+              }
+            }
+        responses:
+          default:
+            statusCode: '200'
+            responseParameters:
+              method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key'"
+              method.response.header.Access-Control-Allow-Methods: "'GET,PUT,POST,DELETE'"
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+            responseTemplates:
+              application/json: "$input.json('$.result')"
+          ".*code\":400.*":
+            statusCode: '400'
+            responseTemplates:
+              application/json: |
+                #set ($err = $util.parseJson($input.path('$.errorMessage')))
+                #set ($mess = $util.escapeJavaScript($err.error.message).replaceAll("\\'","'"))
+                {
+                  "uid" : "$err.id",
+                  "message" : "$mess"
+                }
+          ".*code\":403.*":
+            statusCode: '403'
+            responseTemplates:
+              application/json: |
+                #set ($err = $util.parseJson($input.path('$.errorMessage')))
+                #set ($mess = $util.escapeJavaScript($err.error.message).replaceAll("\\'","'"))
+                {
+                  "uid" : "$err.id",
+                  "message" : "$mess"
+                }
+          ".*code\":404.*":
+            statusCode: '404'
+            responseTemplates:
+              application/json: |
+                #set ($err = $util.parseJson($input.path('$.errorMessage')))
+                #set ($mess = $util.escapeJavaScript($err.error.message).replaceAll("\\'","'"))
+                {
+                  "uid" : "$err.id",
+                  "message" : "$mess"
+                }
+          ".*code\":500.*":
+            statusCode: '500'
+            responseParameters:
+              method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key'"
+              method.response.header.Access-Control-Allow-Methods: "'GET,PUT,POST,DELETE'"
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+            responseTemplates:
+              application/json: |
+                #set ($err = $util.parseJson($input.path('$.errorMessage')))
+                #set ($mess = $util.escapeJavaScript($err.error.message).replaceAll("\\'","'"))
+                {
+                  "uid" : "$err.id",
+                  "message" : "$mess"
+                }
+        uri:
+          Fn::Join:
+          - ''
+          - - 'arn:aws:apigateway:'
+            - Ref: AWS::Region
+            - ":lambda:path/2015-03-31/functions/"
+            - Fn::ImportValue: "porketta-{{instance-stage}}-instance-lambda:function"
+            - "/invocations"
+        passthroughBehavior: never
+        httpMethod: POST
+        contentHandling: CONVERT_TO_TEXT
+        type: aws  
+definitions:
+  Instance:
+    type: object
+    description: >
+      An instance is a simple representation of a cloud server that can be managed by Porketta.
+      A VHost requires a property called `tpl` that can be generated from an `Instance`
+    properties:
+      id:
+        title: nstance identifier in the Cloud Provider scope
+        type: string
+      name:
+        title: Instnace name if available
+        type: string
+      status:
+        title: Instance status
+        description: >
+          This object can have only 2 mutual exclusive properties:
+           - `ok: "message"`
+           - `invalid: "message"
+          If the status is invalid, the instance can not be managed by Porketta. A meaningful message is given
+        type: object
+  
+  VHost:
+    type: object
+    description: A VHost represent a cloud server managed by Porketta
+    properties:
+      hostname:
+        title: hostname
+        description: The FQDN that univocally identifies this Vhost
+        type: string
+      node_name:
+        title: node_name
+        description: Identifier of this virtual server within the cloud provider
+        type: string
+      provider_api:
+         title: provider_api
+         description: CloudProvider api slug
+         type: string
+         enum:
+           - digitalocean
+           - aws-ec2
+      provider_key:
+        title: provider_key
+        description: The identifier for the CloudProvider that manage this vhost
+        type: string
+      owner:
+        title: owner
+        description: "The team id that own this resource"
+        type: string
+      tpl:
+        title: tpl
+        description: >
+          A slug representing this VHost.
+          This property is ignored when used in any method except for GET
+        type: object
+    required:
+      - hostname
+      - node_name
+      - provider_api
+      - provider_key
+      - owner
+
+  CloudProvider:
+    title: CloudProvider
+    description: |
+      Credential set to call the API of a cloud vendor (AWS, Google Cloud, DigitalOcean) on behalf of the user.
+      The field `credential` will never be returned by this API
+    type: object
+    properties:
+      name:
+        description: A name that univocally identifies this credentialset
+        type: string
+      api:
+        description: CloudProvider api slug
+        type: string
+        enum:
+          - digitalocean
+          - aws-ec2
+      identity: 
+        description: Part of the authorization in cloud API; usually is the user email
+        type: string
+      credential: 
+        description: Part of the authorization in cloud API; usually is a secret token
+        type: string
+      owner:
+        description: The owner of this resource
+        type: string
+
+  ErrorMessage:
+    type: object
+    properties:
+      uid:
+        type: string
+        description: Request uid
+      message:
+        type: string
+        description: Error message
+    required:
+      - message
+      - uid
+"x-amazon-apigateway-request-validators":
+  Validate body:
+    validateRequestParameters: false
+    validateRequestBody: true
+  Validate both:
+    validateRequestParameters: true
+    validateRequestBody: true
+  Validate query:
+    validateRequestParameters: true
+    validateRequestBody: false
+securityDefinitions:
+ auth0:
+  type: apiKey
+  name: Authorization
+  in: header
+  x-amazon-apigateway-authtype: custom
+  x-amazon-apigateway-authorizer:
+    type: request
+    identitySource: method.request.header.Authorization
+    authorizerUri:
+      Fn::Join:
+        - ""
+        - 
+          - "arn:aws:apigateway:"
+          - Ref: "AWS::Region"
+          - ":lambda:path/2015-03-31/functions/"
+          - Fn::ImportValue: porketta-{{authorizer-stage}}-authorizer-lambda:function
+          - "/invocations"
+    identityValidationExpression: "[Bb]earer.*"
+    authorizerResultTtlInSeconds: 0
+    authorizerCredentials:
+      Fn::GetAtt: [AuthorizerRole, Arn]

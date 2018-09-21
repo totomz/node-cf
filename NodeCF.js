@@ -46,6 +46,11 @@ NodeCF.prototype.buildTemplate = function () {
         .then(data => {return this.loadExternals(this.options.inputFile, data)})
         .then(data => {
 
+            this.toMerge = {
+
+            };
+            const pork = this;
+
             // These functions can be called from the template, and can access the metadata template
             const __builtinFunctions = {
                 funcTime: function () { return new Date().getTime(); },
@@ -66,6 +71,17 @@ NodeCF.prototype.buildTemplate = function () {
                     return function(val, render) {
                         return val.replace(/"/g, '\\"');
                     };
+                },
+
+                objectMerge: function(){
+                    return function(val, render) {
+
+                        const obj = objectPath.get(data.metadata.aws.template, val); // The object that will be merged
+                        const placeholder = `${Date.now()}-${Math.random()}`;
+
+                        pork.toMerge[placeholder] = obj;
+                        return placeholder;
+                    };
                 }
             };
 
@@ -77,14 +93,14 @@ NodeCF.prototype.buildTemplate = function () {
 
 
             /*
-                data.metadata contains the variable ("mustache view") that will be subsituted in the template.
+                data.metadata contains the variable ("mustache view") that will be replaced in the template.
                 We want to have variables also in the variables (eg: it should be possible to define something like {a: "{{b}} Tom!", b:"hy"})
                 Also, externals may contains variables to be interpolated.
 
                 This line of code take the metadata, converts them to text, and apply the mustache view/render using the metadata itself.
                 The problem are the builtinFunctions, that are striped away when the template is rendered. So we need to add them twice
 
-                The other problem is taht the externals are defined as STRING, not objects.
+                The other problem is that the externals are defined as STRING, not objects.
              */
             data.metadata.aws.template = Object.assign(data.metadata.aws.template, __builtinFunctions);
             const metadata = data.metadata;
@@ -102,6 +118,10 @@ NodeCF.prototype.buildTemplate = function () {
             return data;
         })
         .then(this.render)
+        // .then(data => {
+        //     console.log("Mergio qui?")
+        //     console.log(this.toMerge);
+        // })
 };
 
 NodeCF.prototype.validateTemplate = function(data) {

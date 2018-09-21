@@ -1,0 +1,152 @@
+---
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Stack to test API Gateway
+Metadata:
+  aws:
+    region: eu-west-1
+    capabilities: CAPABILITY_IAM
+    isTemplate: true
+    __external:
+      swaggerdef: swagger.yaml
+    template:
+      name: "porketta-{{stages.0.name}}-api"
+      __use_s3: porketta-lambda-bucket
+      stage: "{{stages.0.name}}"
+      pathMapping: 1
+      authorizer-stage: "{{stages.0.name}}"
+      credentials-stage: "{{stages.0.name}}"
+      vhost-stage: "{{stages.0.name}}"
+      provider-stage: "{{stages.0.name}}"
+      instance-stage: "{{stages.0.name}}"
+      lambdas:
+        - name: credentials
+          arn: "porketta-{{stages.0.name}}-credentials-lambda:function"
+        - name: vhost
+          arn: "porketta-{{stages.0.name}}-vhost-lambda:function"
+        - name: provider
+          arn: "porketta-{{stages.0.name}}-provider-lambda:function"
+        - name: instance
+          arn: "porketta-{{stages.0.name}}-instance-lambda:function"
+      rnd: "{{funcTime}}"
+
+
+Parameters:
+  domainName:
+    Type: String
+    Default: api.porketta.eu
+
+Resources:
+  AuthorizerRole: 
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service: 
+              - apigateway.amazonaws.com
+          Action:
+            - sts:AssumeRole
+      Path: "/"
+      Policies:
+        - PolicyName: authLog
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Action:
+                  - logs:*
+                Resource: arn:aws:logs:*:*:*
+                Effect: Allow
+        - PolicyName: authLambda
+          PolicyDocument: 
+            Version: '2012-10-17'
+            Statement:
+            - Effect: Allow
+              Action:
+              - lambda:InvokeFunction
+              Resource:
+              - "*"
+
+  Api:
+    Type: AWS::ApiGateway::RestApi
+    Properties:
+      Description: 'Porketta HTTP API '
+      FailOnWarnings: true
+      Name: Porketta API {{stage}}
+      Body:
+        {{{swaggerdef}}}
+
+#{{#lambdas}}
+  LambdaPermission{{name}}:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:invokeFunction
+      FunctionName: !ImportValue {{arn}}
+      Principal: apigateway.amazonaws.com
+      SourceArn:
+        Fn::Join:
+        - ''
+        - - 'arn:aws:execute-api:'
+          - Ref: AWS::Region
+          - ":"
+          - Ref: AWS::AccountId
+          - ":"
+          - Ref: Api
+          - "/*"
+#{{/lambdas}}
+
+  Deployment{{stage}}{{rnd}}:
+    Type: AWS::ApiGateway::Deployment
+    Properties:
+      RestApiId:
+        Ref: Api
+      Description: Deployment in {{stage}}
+
+
+  Stage{{Stage}}:
+    Type: AWS::ApiGateway::Stage
+    Properties:
+      DeploymentId: !Ref Deployment{{stage}}{{rnd}}
+      RestApiId: !Ref Api
+      StageName: "{{stage}}"
+      Variables:
+        env: "{{stage}}"
+
+#{{#pathMapping}}
+  PathMapping{{stage}}:
+    Type: AWS::ApiGateway::BasePathMapping
+    DependsOn:
+      - Deployment{{stage}}{{rnd}}
+      - PorkettaApiDomainName{{stage}}
+    Properties:
+      BasePath: ''
+      DomainName: "{{stage}}.kotenna.porketta.eu"
+      RestApiId: !Ref Api
+      Stage: "{{stage}}"
+  PorkettaApiDomainName{{stage}}:
+    Type: AWS::ApiGateway::DomainName
+    Properties:
+      CertificateArn: arn:aws:acm:us-east-1:242728094507:certificate/0f9396a9-5f14-4876-aaf1-611e1f2e18e7
+      DomainName: "{{stage}}.kotenna.porketta.eu"
+  DNSRecordsetGroup:
+    Type: AWS::Route53::RecordSetGroup
+    Properties:
+      HostedZoneId: ZXS1DLL6P4LZA
+      RecordSets:
+      - AliasTarget:
+          DNSName:
+            Fn::GetAtt:
+            - PorkettaApiDomainName{{stage}}
+            - DistributionDomainName
+          HostedZoneId: Z2FDTNDATAQYW2
+        Name: "{{stage}}.kotenna.porketta.eu."
+        Type: A
+#{{/pathMapping}}
+
+Outputs:
+  "Porketta{{stage}}ApiID":
+    Description: The ID of Porketta Api
+    Value: !Ref Api
+    Export:
+      Name: "Porketta-{{stage}}-ApiID"

@@ -3,17 +3,21 @@
 const NodeCF = require('./NodeCF');
 const program = require('commander');
 
-
 program
     .version('0.1.5')
     // .option('-c, --create [path]', 'Create a new stack using the template specified by path')
     // .option('-u, --update [path]', 'Update an existing stack using the template specified by path')
     // .option('-c, --change-set [path]', 'Create and save an aws-changeset for the given stack')
     .arguments('<action> <stack>')  // Can be upsert|changeset
+    // .command('pippo <stack>')
+    // .command('pluto <stack>')
     .option('-d, --dry-run', 'Do not execute AWS CloudFormation')
     .option('-p, --profile [pofile]', 'Name of the AWS profile to use to call AWS CloudFormation')
     .option('-s, --stage [name]', 'Add a stage with this name to the list of stages in the template (that can be empty)')
     .action((action, stack) => {
+        // console.log(":::::");
+        // console.log(action);
+        // console.log(":::::");
         const runParams = {
             inputFile: stack,
             action: 'createStack',
@@ -52,6 +56,7 @@ program
             })
             .catch(err => {
                 console.log(err);
+                process.exit(1);
             })
             .then(data => {
                 console.log(JSON.stringify(data, null, 4));

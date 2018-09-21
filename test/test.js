@@ -57,10 +57,33 @@ describe('Full Test', function() {
         .then(template => {
             return readFile('test/fixtures/simple-sns-result.yaml')
                 .then(expectedContents => {
+
+                    console.log("::::");
+                    console.log(template.contents);
+                    let jj = YAML.parse(template.contents);
+                    console.log("::::");
+
                     expect(YAML.parse(template.contents)).to.be.deep.equal(YAML.parse(expectedContents.toString()));
                     return true;
                 });
         });
+    });
+
+    it('Test Inner Objects', function() {
+
+        return new NodeCF({
+            inputFile: 'test/templates/simple-sns.yaml',
+            action: 'createStack',
+            dryRun: true
+        })
+            .buildTemplate()
+            .then(template => {
+                return readFile('test/fixtures/simple-sns-result.yaml')
+                    .then(expectedContents => {
+                        expect(YAML.parse(template.contents)).to.be.deep.equal(YAML.parse(expectedContents.toString()));
+                        return true;
+                    });
+            });
     });
 
     it('Stop invalid CloudFormation template', function() {
@@ -150,6 +173,26 @@ describe('Full Test', function() {
             .then(template => { return cf.saveTempalteToTempFile(template); })
             .then(data => { return cf.validateTemplate(data); })
             .then(data => { expect(data.contents).to.be.a('string'); return data; })
+            .then(data => {
+                const tpl = YAML.parse(data.contents);
+                expect(tpl.Resources.HttpApi.Properties.Body.paths['/list_booking/{userID}'].get.summary).to.be.equal('list of bookings for a given user ID.');
+            })
+    });
+
+    it('Handle externals - YAML 2', function(){
+
+        cf = new NodeCF({
+            inputFile: 'test/templates/externals/swagger2/stack.yaml',
+            action: 'createStack',
+            dryRun: true,
+            stages: [{name: "gamma"}]
+        });
+
+        return cf
+            .buildTemplate()
+            .then(template => { return cf.saveTempalteToTempFile(template); })
+            .then(data => {
+                expect(data.contents).to.be.a('string'); return data; })
             .then(data => {
                 const tpl = YAML.parse(data.contents);
                 expect(tpl.Resources.HttpApi.Properties.Body.paths['/list_booking/{userID}'].get.summary).to.be.equal('list of bookings for a given user ID.');

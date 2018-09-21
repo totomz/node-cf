@@ -16,11 +16,19 @@ Metadata:
       name: xxx4-test-nodecf-yaml # The name of the stack
       stage: "{{stages.0.name}}"
       innerParam: "daje-{{stage}}-daje"
+      innerTpl:
+          TopicName: indentato
+          Subscription: ['uno', 'due']
+          A:
+            Nested:
+              Proerty: 393
 
 Resources:
 # With yaml you can comment the Mustache directives and avoid breaking syntax check!
   "{{stage}}SnsUserAuthorized":
     Type: AWS::SNS::Topic
     Properties:
-      TopicName: {{name}}
+      TopicName: {{name}}x
       Subscription: []
+
+  
