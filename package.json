@@ -1,6 +1,6 @@
 {
   "name": "@my-ideas/cftpl",
-  "version": "0.1.13",
+  "version": "0.1.14",
   "description": "Add Mustache templating to AWS CLoudFormation",
   "main": "index.js",
   "directories": {
