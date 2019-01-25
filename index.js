@@ -2,9 +2,16 @@
 
 const NodeCF = require('./NodeCF');
 const program = require('commander');
+const updateNotifier = require('update-notifier');
+const pkg = require("./package");
+
+const notifier = updateNotifier({
+    pkg,
+    updateCheckInterval: 1000 * 60 * 60 * 24 // 1 day
+});
 
 program
-    .version('0.1.5')
+    .version(pkg.version)
     // .option('-c, --create [path]', 'Create a new stack using the template specified by path')
     // .option('-u, --update [path]', 'Update an existing stack using the template specified by path')
     // .option('-c, --change-set [path]', 'Create and save an aws-changeset for the given stack')
@@ -20,7 +27,7 @@ program
         // console.log(":::::");
         const runParams = {
             inputFile: stack,
-            action: 'createStack',
+            action: action, // 'createStack',
             aws_profile: program.profile,
             dryRun: program.dryRun
         };
@@ -29,7 +36,7 @@ program
             runParams.stages = [{name: program.stage}];
         }
 
-        if(action !== 'changeset' && action !== 'create') {
+        if(action !== 'changeset' && action !== 'create' && action !== 'update') {
             throw new Error('Action is undefined');
         }
 

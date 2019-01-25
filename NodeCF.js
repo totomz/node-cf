@@ -189,9 +189,18 @@ NodeCF.prototype.saveToCloudFormation = function(data) {
     }
 
     // Upsert!
+    const requestedAction = this.options.action;
     return this.cfClient.describeStacks({StackName: templateMeta.aws.template.name}).promise()
         .then(res => {
             // The stack exists - update!
+            // console.log("::::");
+            // console.log(requestedAction);
+            // console.log("::::");
+            if(requestedAction !== 'update') {
+                console.log("THE STACK ALREADY EXISTS - COWARDLY REFUSING TO PROCEED unless you specify 'update' as action");
+                process.exit(1);
+            }
+
             this.waitForAcion = 'stackUpdateComplete';      // Round round get around, I (work)around, yeah
             return 'updateStack';
         })
